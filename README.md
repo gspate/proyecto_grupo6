@@ -4,7 +4,7 @@
 
 El suscriptor al broker está corriendo constantemente en su contenedor, este recibe la información del broker y la envía a la API para que esta maneje la acción correspondiente (que puede ser un post o un put, este en último en caso de que ya exista el fixture y haya que actualizarlo). Esto se hizo así siguiendo la arquitectura sugerida para esta entrega (ver imagen e0-diagram.png en la carpeta docs).
 
-Luego la API almacena o actualiza los fixtures en la base de datos (implementada con PostgreSQL directamente en la instancia EC2), y luego mediante requests con los parámetros indicados en el enunciado se realizan las consultas correspondientes. Importante destacar que los endpoints para las consultas son iguales a los que se usan como ejemplo para cada requisito funcional en el enunciado. De todas formas, si hay alguna duda/confusión se puede ver el archivo api.py para ver como están estructurados los endpoints.
+Luego la API almacena o actualiza los fixtures en la base de datos (implementada con PostgreSQL en un contenedor Docker), y luego mediante requests con los parámetros indicados en el enunciado se realizan las consultas correspondientes. Importante destacar que los endpoints para las consultas son iguales a los que se usan como ejemplo para cada requisito funcional en el enunciado. De todas formas, si hay alguna duda/confusión se puede ver el archivo api.py para ver como están estructurados los endpoints.
 
 La API y el suscriptor al broker estarán ejecutándose en un contenedores separados constantemente (al momento de la revisión esta estará corriendo), el servicio de PostgreSQL estará activo en todo momento ya que se implementó directamente en la instancia EC2. Además, esta funcionará a través del puerto 8000 que está configurado con NGINX, por lo para hacer consultas la sintaxis es: arqui-2024-gspate.me/*endpoint*.
 
@@ -42,7 +42,7 @@ Se lograron todos los requisitos funcionales.
 
 Se lograron todos los requisitos no funcionales.
 
-Se lograron todos los requisitos funcionales de Docker-Compose, menos el RNF2 (que la base de datos esté dentro de un contenedor).
+Se lograron todos los requisitos funcionales de Docker-Compose.
 
 Se lograron todos los requisitos variables de HTTPS.
 
