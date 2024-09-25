@@ -11,7 +11,6 @@ from datetime import datetime
 # Ruta para acceder a la BDD desde un contenedor Docker
 DATABASE_URL = "postgresql://gustavog.spate:panCONqueso123?@postgres:5432/football_db"
 
-
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()

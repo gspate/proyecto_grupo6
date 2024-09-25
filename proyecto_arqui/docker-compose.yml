@@ -14,6 +14,7 @@ services:
         - postgres_data:/var/lib/postgresql/data
       networks:
         - app-network
+        
   api:
     build:
       context: ./api
