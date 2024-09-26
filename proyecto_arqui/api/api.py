@@ -9,7 +9,6 @@ from typing import List, Optional
 from datetime import datetime
 from jose import JWTError, jwt
 
-
 # Configuración de la base de datos
 
 # Ruta para acceder a la BDD desde un contenedor Docker
