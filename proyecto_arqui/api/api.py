@@ -1,16 +1,18 @@
-from fastapi import FastAPI, HTTPException, Query, status
+from fastapi import FastAPI, HTTPException, Query, status, Depends
+from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import create_engine, Column, Integer, String, Boolean, Date, Float, DateTime, func
-from sqlalchemy.orm import sessionmaker, relationship
+from sqlalchemy.orm import Session, sessionmaker, relationship
 from sqlalchemy.ext.declarative import declarative_base
 from pydantic import BaseModel
+from passlib.context import CryptContext
 from typing import List, Optional
 from datetime import datetime
+from jose import JWTError, jwt
 
 # Configuración de la base de datos
 
 # Ruta para acceder a la BDD desde un contenedor Docker
 DATABASE_URL = "postgresql://gustavog.spate:panCONqueso123?@postgres:5432/football_db"
-
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -52,7 +54,45 @@ class Fixture(Base):
     odds_away_value = Column(Float, nullable=True)
     last_updated = Column(DateTime, default=func.now(), onupdate=func.now())
 
+# Modelo de usuario con wallet
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    auth0_id = Column(String, unique=True, index=True)  # ID del usuario en Auth0
+    email = Column(String, unique=True, index=True)
+    wallet_balance = Column(Float, default=0)  # Saldo inicial de la wallet
+
 Base.metadata.create_all(bind=engine)
+
+
+# Configuración de seguridad con Auth0
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+SECRET_KEY = "your_auth0_secret_key"  # El secret de Auth0
+ALGORITHM = "HS256"
+AUDIENCE = "your_auth0_audience"  # Audience configurada en Auth0
+ISSUER = "https://your_auth0_domain/"  # Dominio de Auth0
+
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(SessionLocal)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM], audience=AUDIENCE, issuer=ISSUER)
+        auth0_id: str = payload.get("sub")  # Obtenemos el ID del usuario en Auth0
+        email: str = payload.get("email")
+
+        # Buscamos al usuario en la base de datos
+        user = db.query(User).filter(User.auth0_id == auth0_id).first()
+
+        if user is None:
+            # Si el usuario no existe, lo creamos en la base de datos con saldo 0
+            new_user = User(auth0_id=auth0_id, email=email, wallet_balance=0)
+            db.add(new_user)
+            db.commit()
+            db.refresh(new_user)
+            return new_user
+        return user
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Could not validate credentials")
 
 # Crear la instancia de FastAPI
 app = FastAPI()
@@ -175,5 +215,12 @@ def delete_all_fixtures():
     finally:
         db.close()
 
+# Endpoint para recargar la wallet de un usuario (RF4)
+@app.post("/wallet/recharge/")
+def recharge_wallet(amount: float, db: Session = Depends(SessionLocal), current_user: User = Depends(get_current_user)):
+    if amount <= 0:
+        raise HTTPException(status_code=400, detail="Invalid amount")
 
-
+    current_user.wallet_balance += amount
+    db.commit()
+    return {"message": f"{amount} has been added to your wallet", "new_balance": current_user.wallet_balance}

@@ -10,20 +10,23 @@ def send_to_api(fixture_info: dict):
     fixture_id = fixture_info["fixture_id"]
     try:
         get_response = requests.get(f"{API_URL}/fixtures/{fixture_id}")
-        
+
         if get_response.status_code == 200: # Si el fixture existe, hacer un PUT
             response = requests.put(f"{API_URL}/fixtures/{fixture_id}", json=fixture_info)
-            print(f"Se actualizaron los datos de la fixture {fixture_id}") 
+            print(f"Se actualizaron los datos de la fixture {fixture_id}")
+
         elif get_response.status_code == 404: # Si el fixture no existe, hacer un POST
             response = requests.post(API_URL + "/fixtures", json=fixture_info)
             print(f"Se postearon los datos de la fixture {fixture_id}")
+
         else:
             print(f"Error al verificar el fixture: {get_response.status_code}")
             return
-        
+
         response.raise_for_status()  # Lanza una excepción si la solicitud falló
     except requests.exceptions.RequestException as e:
         print(f"Error al enviar datos a la API: {e}")
+
 
 # Callback cuando se conecta al broker
 def on_connect(client, userdata, flags, rc):
@@ -34,12 +37,13 @@ def on_connect(client, userdata, flags, rc):
     else:
         print(f"Error de conexión. Código: {rc}")
 
+
 # Callback cuando se recibe un mensaje del broker
 def on_message(client, userdata, msg):
     payload = msg.payload.decode("utf-8")
     data1 = json.loads(payload)
     data = json.loads(data1)
-    
+
     fixtures = data.get("fixtures", [])
     for fixture in fixtures:
         fixture_data = fixture.get("fixture", {})
@@ -101,7 +105,7 @@ def on_message(client, userdata, msg):
             })
 
         # Diccionario con las odds para cada fixture
-        odds_info = odds_list[0] 
+        odds_info = odds_list[0]
         last_updated = str(datetime.datetime.utcnow().isoformat())
 
         # Crear el diccionario con la información del fixture
@@ -138,9 +142,10 @@ def on_message(client, userdata, msg):
             "odds_away_value": odds_info.get("odds_away_value"),
             "last_updated": last_updated
         }
-        
+
         # Enviar los datos a la API
         send_to_api(fixture_info)
+
 
 # Crear una instancia del cliente MQTT
 client = mqtt.Client()

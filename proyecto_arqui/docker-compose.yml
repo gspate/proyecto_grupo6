@@ -14,6 +14,7 @@ services:
         - postgres_data:/var/lib/postgresql/data
       networks:
         - app-network
+        
   api:
     build:
       context: ./api
@@ -29,7 +30,7 @@ services:
 
   mqtt-suscriber:
     build:
-      context: ./mqtt_suscriber
+      context: ./info/mqtt_suscriber
       dockerfile: Dockerfile
     environment:
       - MQTT_BROKER_URL=broker.iic2173.org
