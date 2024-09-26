@@ -5,7 +5,6 @@ import datetime
 
 API_URL = "http://api:8000" # URL DE API EN AWS
 
-
 # Enviar los datos a la API
 def send_to_api(fixture_info: dict):
     fixture_id = fixture_info["fixture_id"]
