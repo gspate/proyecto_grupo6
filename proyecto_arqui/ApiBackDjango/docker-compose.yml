@@ -6,7 +6,7 @@ services:
     volumes:
       - .:/app
     environment:
-      - DEBUG=True
+      DEBUG: "True"  # Cambiado a mapeo
     depends_on:
       - db
 
@@ -19,5 +19,18 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  mqtt-subscriber:
+    build:
+      context: ./sub/mqtt_sub/info  # Cambiado a la carpeta donde está el Dockerfile del MQTT subscriber
+      dockerfile: Dockerfile
+    environment:
+      MQTT_BROKER_URL: "broker.iic2173.org"  # Cambiado a mapeo
+      MQTT_BROKER_PORT: "9000"  # Cambiado a mapeo
+    networks:
+      - app-network
+
 volumes:
   postgres_data:
+
+networks:
+  app-network:
