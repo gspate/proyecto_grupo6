@@ -1,23 +1,48 @@
-services:
-  web:
-    build: .
-    ports:
-      - "8000:8000"
-    volumes:
-      - .:/app
-    environment:
-      - DEBUG=True
-    depends_on:
-      - db
+version: '3.8'
 
-  db:
-    image: postgres:13
+services:
+  postgres:
+    image: postgres:14
     environment:
-      POSTGRES_DB: football_db
       POSTGRES_USER: gustavog.spate
-      POSTGRES_PASSWORD: panCONqueso123
+      POSTGRES_PASSWORD: panCONqueso123?
+      POSTGRES_DB: football_db
+    ports:
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  api:
+    build: .
+    depends_on:
+      - postgres
+    volumes:
+      - .:/code
+    ports:
+      - "8000:8000"
+    networks:
+      - app-network
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+
+  mqtt-subscriber:
+    depends_on:
+      - api
+    build:
+      context: ../mqtt_suscriber/info 
+      dockerfile: Dockerfile
+    networks:
+      - app-network
+    environment:
+      - MQTT_BROKER_URL=broker.iic2173.org
+      - MQTT_BROKER_PORT=9000
+
+networks:
+  app-network:
+    driver: bridge
 
 volumes:
   postgres_data:

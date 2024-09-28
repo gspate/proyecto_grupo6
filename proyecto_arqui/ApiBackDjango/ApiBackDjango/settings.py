@@ -25,7 +25,8 @@ SECRET_KEY = 'django-insecure--fsd#r28mb%95is3_@7_f1!tm7#me4tnbcikfgx8ihrh4u@99_
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+# Quizas esto sea necesario cambiarlo en la instancia EC2 (por el dominio)
+ALLOWED_HOSTS = ['api', 'localhost', '127.0.0.1']
 
 
 # Application definition
@@ -37,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
     'fixtures',
     'accounts',
 ]
@@ -77,11 +79,14 @@ WSGI_APPLICATION = 'ApiBackDjango.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'football_db',
+        'USER': 'gustavog.spate',
+        'PASSWORD': 'panCONqueso123?',
+        'HOST': 'postgres',
+        'PORT': '5432',
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
