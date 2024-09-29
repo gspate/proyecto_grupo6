@@ -13,11 +13,17 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gustavog.spate -d football_db -h localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   api:
     build: .
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy  # Espera a que la base de datos esté lista
     volumes:
       - .:/code
     ports:
@@ -25,6 +31,7 @@ services:
     networks:
       - app-network
     environment:
+      - DATABASE_URL=postgresql://gustavog.spate:your_password@postgres:5432/football_db
       - DB_HOST=postgres
       - DB_PORT=5432
 
