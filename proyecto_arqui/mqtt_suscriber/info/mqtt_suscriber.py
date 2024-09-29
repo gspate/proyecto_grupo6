@@ -8,14 +8,32 @@ API_URL = "http://api:8000" # URL DE API EN AWS
 # Enviar los datos a la API
 def send_to_api(fixture_info: dict):
     fixture_id = fixture_info["fixture_id"]
+
+    # Modificar el campo 'date' para que solo contenga la fecha (sin hora)
+    if 'date' in fixture_info and fixture_info['date']:
+        fixture_info['date'] = fixture_info['date'].split('T')[0]  # Esto elimina la parte de la hora
+
+    # Convertir los valores de odds a flotantes
     try:
+        if 'odds_home_value' in fixture_info:
+            fixture_info['odds_home_value'] = float(fixture_info['odds_home_value']) if fixture_info['odds_home_value'] else None
+        if 'odds_draw_value' in fixture_info:
+            fixture_info['odds_draw_value'] = float(fixture_info['odds_draw_value']) if fixture_info['odds_draw_value'] else None
+        if 'odds_away_value' in fixture_info:
+            fixture_info['odds_away_value'] = float(fixture_info['odds_away_value']) if fixture_info['odds_away_value'] else None
+    except ValueError as e:
+        print(f"Error al convertir las odds a float: {e}")
+        return
+
+    try:
+        print("Datos a enviar:", fixture_info)
         get_response = requests.get(f"{API_URL}/fixtures/{fixture_id}")
 
-        if get_response.status_code == 200: # Si el fixture existe, hacer un PUT
+        if get_response.status_code == 200:  # Si el fixture existe, hacer un PUT
             response = requests.put(f"{API_URL}/fixtures/{fixture_id}", json=fixture_info)
             print(f"Se actualizaron los datos de la fixture {fixture_id}")
 
-        elif get_response.status_code == 404: # Si el fixture no existe, hacer un POST
+        elif get_response.status_code == 404:  # Si el fixture no existe, hacer un POST
             response = requests.post(API_URL + "/fixtures", json=fixture_info)
             print(f"Se postearon los datos de la fixture {fixture_id}")
 
@@ -26,6 +44,7 @@ def send_to_api(fixture_info: dict):
         response.raise_for_status()  # Lanza una excepción si la solicitud falló
     except requests.exceptions.RequestException as e:
         print(f"Error al enviar datos a la API: {e}")
+
 
 
 # Callback cuando se conecta al broker

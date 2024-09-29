@@ -25,6 +25,7 @@ services:
     networks:
       - app-network
     environment:
+      - DATABASE_URL=postgresql://gustavog.spate:your_password@postgres:5432/football_db
       - DB_HOST=postgres
       - DB_PORT=5432
 
