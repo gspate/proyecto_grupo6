@@ -40,9 +40,12 @@ INSTALLED_APPS = [
     'rest_framework',
     'fixtures',
     'accounts',
+    'corsheaders',
 ]
+CORS_ALLOW_ALL_ORIGINS = True #Ver bien esto, es suplementario por mientras
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
