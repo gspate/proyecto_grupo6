@@ -4,6 +4,7 @@ from django.conf import settings
 from django.http import JsonResponse
 from jose import jwt
 from wallet.models import Wallet
+from django.contrib import auth
 
 def jwt_required(view_func):
     def _wrapped_view(request, *args, **kwargs):
