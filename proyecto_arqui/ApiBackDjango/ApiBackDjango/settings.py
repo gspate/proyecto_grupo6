@@ -50,7 +50,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'Auth.middleware.token_required',
+    'ApiBackDjango.middleware.jwt_required',
 ]
 
 ROOT_URLCONF = 'ApiBackDjango.urls'
