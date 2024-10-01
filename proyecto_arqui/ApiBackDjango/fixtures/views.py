@@ -4,13 +4,20 @@ from rest_framework.views import APIView
 from .models import Fixture, BonusRequest
 from .serializers import FixtureSerializer, BonusRequestSerializer, BonusValidationSerializer
 from django.utils.timezone import now
+
+
+
 from datetime import datetime
+
 
 # Vista para listar y filtrar fixtures (partidos)
 class FixtureList(generics.ListCreateAPIView):
     serializer_class = FixtureSerializer
+
+
     queryset = Fixture.objects.filter(date__gte=now())  # Solo partidos futuros
     pagination_class = None  # Personaliza la paginación aquí si es necesario
+
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -32,6 +39,7 @@ class FixtureDetail(generics.RetrieveUpdateAPIView):
     serializer_class = FixtureSerializer
     queryset = Fixture.objects.all()
     lookup_field = 'fixture_id'
+
 
 # Vista para manejar solicitudes de compra de bonos desde el canal fixtures/requests
 class BonusRequestView(generics.CreateAPIView):
@@ -122,3 +130,4 @@ class BonusValidationView(generics.UpdateAPIView):
             return Response({
                 "message": f"Compra con request_id {request_id} rechazada. Bonos devueltos."
             }, status=status.HTTP_400_BAD_REQUEST)
+
