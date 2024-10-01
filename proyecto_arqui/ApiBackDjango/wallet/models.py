@@ -3,8 +3,8 @@ from django.contrib.auth.models import User
 
 class Wallet(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    wallet_address = models.CharField(max_length=255)
-    balance = models.DecimalField(max_digits=20, decimal_places=4, default=0)
+    balance = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    currency = models.CharField(max_length=10, default='CLP')  # Puedes cambiarlo según tus necesidades
 
     def __str__(self):
-        return f"Wallet for {self.user.username}"
+        return f'{self.user.username} Wallet'

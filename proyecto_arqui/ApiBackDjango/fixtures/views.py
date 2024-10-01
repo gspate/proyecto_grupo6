@@ -3,11 +3,13 @@ from .models import Fixture
 from .serializers import FixtureSerializer
 from django.utils.timezone import now
 from django.db.models import Q
+from rest_framework.permissions import IsAuthenticated
 
 class FixtureList(generics.ListCreateAPIView):
     serializer_class = FixtureSerializer
     queryset = Fixture.objects.filter(date__gte=now())  # Only future matches
     pagination_class = None  # You can customize pagination here
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -28,3 +30,4 @@ class FixtureDetail(generics.RetrieveUpdateAPIView):
     serializer_class = FixtureSerializer
     queryset = Fixture.objects.all()
     lookup_field = 'fixture_id'
+    permission_classes = [IsAuthenticated]
