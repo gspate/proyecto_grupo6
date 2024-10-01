@@ -1,18 +1,22 @@
-# Usa una imagen base de Python
+# Use a base image with Python
 FROM python:3.12-slim
 
-# Establece el directorio de trabajo
+# Set work directory
 WORKDIR /app
 
-# Copia los archivos de requisitos y el resto del código
-COPY requirements.txt ./
+# Copy requirements file first for better caching
+COPY requirements.txt .
+
+# Install dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install gunicorn
+
+# Copy the rest of the application code
 COPY . .
 
-# Instala las dependencias
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Expone el puerto que usará la aplicación
+# Expose the port
 EXPOSE 8000
 
-# Comando para ejecutar la aplicación
-CMD ["sh", "-c", "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"]
+# Run the migrations and start the server
+ENTRYPOINT ["sh", "-c"]
+CMD ["python manage.py migrate && python manage.py runserver 0.0.0.0:8000"] 

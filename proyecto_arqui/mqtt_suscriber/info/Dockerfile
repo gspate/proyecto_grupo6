@@ -1,6 +1,9 @@
 # Usa una imagen base de Python
 FROM python:3.11-slim
 
+# Instalar curl y ping
+RUN apt-get update && apt-get install -y curl iputils-ping
+
 # Establece el directorio de trabajo
 WORKDIR /app
 
@@ -12,4 +15,4 @@ COPY mqtt_suscriber.py .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Comando para ejecutar el suscriptor MQTT
-CMD ["python3", "mqtt_suscriber.py"]
+CMD ["python3", "-u", "mqtt_suscriber.py"]

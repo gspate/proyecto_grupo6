@@ -1,4 +1,6 @@
 from django.db import models
+from django.utils import timezone
+import uuid
 
 class Fixture(models.Model):
     fixture_id = models.IntegerField(unique=True)
@@ -31,7 +33,24 @@ class Fixture(models.Model):
     odds_home_value = models.FloatField(null=True, blank=True)
     odds_draw_value = models.FloatField(null=True, blank=True)
     odds_away_value = models.FloatField(null=True, blank=True)
+    available_bonuses = models.IntegerField(default=40) # 40 bonos per fixture by default
     last_updated = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"Fixture {self.fixture_id}"
+
+class BonusRequest(models.Model):
+    request_id = models.UUIDField(unique=True, default=uuid.uuid4, editable=False)
+    fixture = models.ForeignKey('Fixture', on_delete=models.CASCADE)
+    quantity = models.IntegerField()
+    datetime = models.DateTimeField(default=timezone.now)
+    group_id = models.CharField(max_length=10, null=True, blank=True)
+    league_name = models.CharField(max_length=100, default='Unknown League')  # Valor predeterminado
+    round = models.CharField(max_length=100, default='Regular Season')  # Valor predeterminado
+    date = models.DateField(default=timezone.now)
+    result = models.CharField(max_length=50, default='---')
+    deposit_token = models.CharField(max_length=100, blank=True, null=True)
+    seller = models.IntegerField(default=0)
+
+    def __str__(self):
+        return f"Request {self.request_id} for Fixture {self.fixture.fixture_id} - Group {self.group_id}"

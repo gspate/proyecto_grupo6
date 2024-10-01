@@ -26,7 +26,7 @@ def send_to_api(fixture_info: dict):
         return
 
     try:
-        print("Datos a enviar:", fixture_info)
+        # print("Datos a enviar:", fixture_info)
         get_response = requests.get(f"{API_URL}/fixtures/{fixture_id}")
 
         if get_response.status_code == 200:  # Si el fixture existe, hacer un PUT
