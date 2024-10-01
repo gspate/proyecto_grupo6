@@ -18,12 +18,9 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, re_path
 from wallet.views import WalletInfoView
-from fixtures.views import FixtureList, FixtureDetail  # Importa tus vistas de fixtures
+from fixtures.views import FixtureList, FixtureDetail, BonusRequestView, BonusValidationView
 
 urlpatterns = [
- 
-
-    
     path('wallet/', WalletInfoView.as_view(), name='wallet_info'), #Valores wallet user, JWT
     re_path(r'^wallet$', WalletInfoView.as_view(), name='wallet_info_redirect'),  # Redirección
     path('fixtures', FixtureList.as_view(), name='fixture-list'),
