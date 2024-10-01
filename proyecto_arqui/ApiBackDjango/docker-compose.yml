@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:14
@@ -35,11 +33,35 @@ services:
       - DB_HOST=postgres
       - DB_PORT=5432
 
-  mqtt-subscriber:
+  mqtt-subscriber-info:
     depends_on:
       - api
     build:
       context: ../mqtt_suscriber/info 
+      dockerfile: Dockerfile
+    networks:
+      - app-network
+    environment:
+      - MQTT_BROKER_URL=broker.iic2173.org
+      - MQTT_BROKER_PORT=9000
+
+  mqtt-subscriber-requests:
+    depends_on:
+      - api
+    build:
+      context: ../mqtt_suscriber/requests
+      dockerfile: Dockerfile
+    networks:
+      - app-network
+    environment:
+      - MQTT_BROKER_URL=broker.iic2173.org
+      - MQTT_BROKER_PORT=9000
+
+  mqtt-subscriber-validation:
+    depends_on:
+      - api
+    build:
+      context: ../mqtt_suscriber/validations
       dockerfile: Dockerfile
     networks:
       - app-network

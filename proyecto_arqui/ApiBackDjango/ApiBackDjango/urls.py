@@ -14,18 +14,21 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+
 from django.contrib import admin
 from django.urls import path, re_path
 from wallet.views import WalletInfoView
 from fixtures.views import FixtureList, FixtureDetail  # Importa tus vistas de fixtures
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+ 
 
-    # Ruta ver dinero
+    
     path('wallet/', WalletInfoView.as_view(), name='wallet_info'), #Valores wallet user, JWT
     re_path(r'^wallet$', WalletInfoView.as_view(), name='wallet_info_redirect'),  # Redirección
-    # Rutas de fixtures
-    path('api/fixtures/', FixtureList.as_view(), name='fixture-list'),  # Lista de fixtures
-    path('api/fixtures/<int:fixture_id>/', FixtureDetail.as_view(), name='fixture-detail'),  # Detalle de un fixture
+    path('fixtures', FixtureList.as_view(), name='fixture-list'),
+    path('fixtures/<int:fixture_id>', FixtureDetail.as_view(), name='fixture-detail'),
+    path('bonus/request', BonusRequestView.as_view(), name='bonus-request'),
+    path('bonus/request/<str:request_id>/', BonusValidationView.as_view(), name='bonus-validate'),
 ]
+

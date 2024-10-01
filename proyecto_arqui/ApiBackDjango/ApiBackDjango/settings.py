@@ -26,8 +26,7 @@ SECRET_KEY = 'django-insecure--fsd#r28mb%95is3_@7_f1!tm7#me4tnbcikfgx8ihrh4u@99_
 DEBUG = True
 
 # Quizas esto sea necesario cambiarlo en la instancia EC2 (por el dominio)
-ALLOWED_HOSTS = ['api', 'localhost', '127.0.0.1']
-
+ALLOWED_HOSTS = ['api', 'localhost', '127.0.0.1', 'arqui-2024-gspate.me', 'www.arqui-2024-gspate.me']
 
 # Application definition
 
