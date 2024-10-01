@@ -134,7 +134,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 AUTH0_DOMAIN = "http://dev-p2e1o36pgodzyujf.us.auth0.com"
-API_IDENTIFIER = "http://api-arqui.com"
+API_IDENTIFIER = "https://arqui-api.com/"
 
 
 
