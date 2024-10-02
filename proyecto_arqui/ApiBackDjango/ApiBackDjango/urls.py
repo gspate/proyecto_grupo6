@@ -18,7 +18,7 @@ Including another URLconf
 from django.contrib import admin, auth
 from django.urls import path, re_path
 from wallet.views import WalletInfoView
-from fixtures.views import FixtureList, FixtureDetail, BonusRequestView, BonusValidationView
+from fixtures.views import FixtureList, FixtureDetail, BonusRequestView, BonusValidationView, secured_endpoint
 
 urlpatterns = [
     path('wallet/', WalletInfoView.as_view(), name='wallet_info'), #Valores wallet user, JWT
@@ -27,5 +27,6 @@ urlpatterns = [
     path('fixtures/<int:fixture_id>', FixtureDetail.as_view(), name='fixture-detail'),
     path('bonus/request', BonusRequestView.as_view(), name='bonus-request'),
     path('bonus/request/<str:request_id>/', BonusValidationView.as_view(), name='bonus-validate'),
+    path('secured-endpoint/', secured_endpoint),
 ]
 

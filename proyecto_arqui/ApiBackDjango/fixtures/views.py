@@ -1,12 +1,11 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from .models import Fixture, BonusRequest
 from .serializers import FixtureSerializer, BonusRequestSerializer, BonusValidationSerializer
 from django.utils.timezone import now
-
-
-
 from datetime import datetime
 
 
@@ -131,3 +130,8 @@ class BonusValidationView(generics.UpdateAPIView):
                 "message": f"Compra con request_id {request_id} rechazada. Bonos devueltos."
             }, status=status.HTTP_400_BAD_REQUEST)
 
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def secured_endpoint(request):
+    return Response({"message": "Acceso autorizado con JWT válido"})

@@ -20,4 +20,6 @@ python-jose
 requests
 djangorestframework
 psycopg2-binary
-flake8
+flake8 
+auth0-python 
+django-auth0-jwt
