@@ -1,6 +1,6 @@
 from django.db import models
 from django.utils import timezone
-import uuid
+import uuid6
 
 class Fixture(models.Model):
     fixture_id = models.IntegerField(unique=True)
@@ -40,7 +40,7 @@ class Fixture(models.Model):
         return f"Fixture {self.fixture_id}"
 
 class Bonos(models.Model):
-    request_id = models.UUIDField(unique=True, default=uuid.uuid4, editable=False)
+    request_id = models.UUIDField(unique=True, default=uuid6.uuid6, editable=False)
     fixture = models.ForeignKey('Fixture', on_delete=models.CASCADE)
     # user_id = models.IntegerField()    
     quantity = models.IntegerField()

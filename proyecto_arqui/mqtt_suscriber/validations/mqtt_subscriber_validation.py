@@ -41,7 +41,7 @@ def on_message_validation(client, userdata, msg):
             return
         
         # Incluir el request_id en la URL
-        api_url_with_id = f"{API_URL}/{request_id}/"
+        api_url_with_id = f"{API_URL}/{request_id}"
         
         # Enviar la validación de la solicitud a la API
         send_validation_request(api_url_with_id, data)
