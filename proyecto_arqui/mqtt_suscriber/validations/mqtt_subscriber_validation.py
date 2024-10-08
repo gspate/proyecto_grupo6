@@ -26,7 +26,6 @@ def send_validation_request(api_url_with_id, data):
         print(f"Validación de solicitud enviada. Status code: {response.status_code}")
     except requests.exceptions.RequestException as e:
         print(f"Error al enviar datos a la API: {e}")
-        raise  # Volver a lanzar la excepción para que el decorador @retry la maneje
 
 def on_message_validation(client, userdata, msg):
     try:

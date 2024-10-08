@@ -25,11 +25,11 @@ class UserView(APIView):
     Vista para manejar la creación de usuarios (POST) y listar todos los usuarios (GET).
     """
 
-    # GET: Obtener la lista de todos los usuarios
-    def get(self, request, *args, **kwargs):
-        users = User.objects.all()
-        serializer = UserSerializer(users, many=True)
-        return Response(serializer.data)
+    # # GET: Obtener la lista de todos los usuarios
+    # def get(self, request, *args, **kwargs):
+    #     users = User.objects.all()
+    #     serializer = UserSerializer(users, many=True)
+    #     return Response(serializer.data)
 
     # POST: Crear un nuevo usuario
     def post(self, request, *args, **kwargs):
@@ -110,8 +110,10 @@ class FixtureList(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-# Vista para obtener detalles de un fixture específico
 class FixtureDetail(APIView):
+    """
+    Vista para obtener (GET) o actualizar (PUT) un fixture específico.
+    """
     def get_object(self, fixture_id):
         try:
             return Fixture.objects.get(fixture_id=fixture_id)
@@ -219,7 +221,7 @@ class BonosView(APIView):
 
 class BonusRequestView(APIView):
     """
-    Vista para crear una solicitud de bonos (BonusRequest).
+    Vista para almacenar solicitudes de compra de bonos desde el canal fixtures/requests.
     """
 
     def post(self, request, *args, **kwargs):
@@ -268,8 +270,11 @@ class BonusRequestView(APIView):
             return Response({"error": "No hay suficientes bonos disponibles"}, status=status.HTTP_400_BAD_REQUEST)
 
 
-# Vista para procesar validaciones de solicitudes de bonos desde el canal fixtures/validation
+
 class BonusValidationView(APIView):
+    """
+    Vista para procesar validaciones de solicitudes de bonos desde el canal fixtures/validation.
+    """
     def put(self, request, request_id, *args, **kwargs):
         # Extraer la validación y el request_id
         validation_data = request.data
