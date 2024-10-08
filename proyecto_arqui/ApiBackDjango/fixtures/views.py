@@ -9,49 +9,78 @@ from django.utils.timezone import now
 from datetime import datetime
 
 # Vista para listar y filtrar fixtures (partidos)
-class FixtureList(generics.ListCreateAPIView):
-    serializer_class = FixtureSerializer
-    queryset = Fixture.objects.filter(date__gte=now())  # Solo partidos futuros
-    pagination_class = None  # Personaliza la paginación aquí si es necesario
+class FixtureList(APIView):
+    """
+    Vista para listar y crear partidos (fixtures).
+    """
 
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        home_team = self.request.query_params.get('home')
-        away_team = self.request.query_params.get('away')
-        date = self.request.query_params.get('date')
+    # Manejar GET (obtener lista de fixtures)
+    def get(self, request, *args, **kwargs):
+        # Filtrar solo partidos futuros
+        queryset = Fixture.objects.filter(date__gte=now())
+        
+        # Obtener parámetros de consulta opcionales
+        home_team = request.query_params.get('home')
+        away_team = request.query_params.get('away')
+        date = request.query_params.get('date')
 
+        # Aplicar filtros si se proporcionan
         if home_team:
             queryset = queryset.filter(home_team_name__icontains=home_team)
         if away_team:
             queryset = queryset.filter(away_team_name__icontains=away_team)
         if date:
             queryset = queryset.filter(date__date=date)
+        
+        # Serializar los datos
+        serializer = FixtureSerializer(queryset, many=True)
+        
+        return Response(serializer.data)
 
-        return queryset
+    # Manejar POST (crear un nuevo fixture)
+    def post(self, request, *args, **kwargs):
+        serializer = FixtureSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # Vista para obtener detalles de un fixture específico
-class FixtureDetail(generics.RetrieveUpdateAPIView):
-    serializer_class = FixtureSerializer
-    queryset = Fixture.objects.all()
-    lookup_field = 'fixture_id'
+class FixtureDetail(APIView):
 
+
+    def get_object(self, fixture_id):
+        try:
+            return Fixture.objects.get(fixture_id=fixture_id)
+        except Fixture.DoesNotExist:
+            raise Http404
+
+    # Manejar GET (obtener un fixture por fixture_id)
+    def get(self, request, fixture_id, *args, **kwargs):
+        fixture = self.get_object(fixture_id)
+        serializer = FixtureSerializer(fixture)
+        return Response(serializer.data)
+    
 # Vista para manejar solicitudes de compra de bonos desde el canal fixtures/requests
-class BonusRequestView(generics.CreateAPIView):
-    serializer_class = BonusRequestSerializer
 
-    def create(self, request, *args, **kwargs):
+class BonusRequestView(APIView):
+    """
+    Vista para crear una solicitud de bonos (BonusRequest).
+    """
+
+    def post(self, request, *args, **kwargs):
         request_data = request.data
         fixture_id_request = request_data.get('fixture_id')
         quantity = int(request_data.get('quantity', 0))  # Cantidad de bonos solicitados
-        
+
         try:
             fixture = Fixture.objects.get(fixture_id=fixture_id_request)
         except Fixture.DoesNotExist:
             return Response({"error": "Fixture no encontrado"}, status=status.HTTP_404_NOT_FOUND)
 
-        # Validamos si hay suficientes bonos disponibles
+        # Validar si hay suficientes bonos disponibles
         if fixture.available_bonuses >= quantity:
-            # Descontamos temporalmente los bonos
+            # Descontar temporalmente los bonos
             fixture.available_bonuses -= quantity
             fixture.save()
 
@@ -59,7 +88,7 @@ class BonusRequestView(generics.CreateAPIView):
             raw_date = request_data.get('date')
             formatted_date = datetime.strptime(raw_date[:10], '%Y-%m-%d').date()
 
-            # Guardamos la solicitud en la tabla BonusRequest
+            # Crear una nueva solicitud de bono (BonusRequest)
             bonus_request = BonusRequest.objects.create(
                 request_id=request_data.get('request_id'),
                 fixture=fixture,
@@ -79,19 +108,13 @@ class BonusRequestView(generics.CreateAPIView):
         else:
             return Response({"error": "No hay suficientes bonos disponibles"}, status=status.HTTP_400_BAD_REQUEST)
 
-
 # Vista para procesar validaciones de solicitudes de bonos desde el canal fixtures/validation
-class BonusValidationView(generics.UpdateAPIView):
-    """
-    Endpoint para procesar las validaciones de las compras de bonos desde el canal fixtures/validation.
-    """
-    serializer_class = BonusValidationSerializer
-    lookup_field = 'request_id'  # Usamos 'request_id' para buscar la solicitud
+class BonusValidationView(APIView):
+    
 
-    def update(self, request, *args, **kwargs):
+    def put(self, request, request_id, *args, **kwargs):
         # Extraer la validación y el request_id
         validation_data = request.data
-        request_id = kwargs.get('request_id')
 
         # Verificar que tenemos el campo valid
         valid = validation_data.get('valid', None)

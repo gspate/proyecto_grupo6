@@ -18,8 +18,14 @@ from django.urls import path
 from fixtures.views import FixtureList, FixtureDetail, BonusRequestView, BonusValidationView
 
 urlpatterns = [
-    path('fixtures', FixtureList.as_view(), name='fixture-list'),
-    path('fixtures/<int:fixture_id>', FixtureDetail.as_view(), name='fixture-detail'),
-    path('bonus/request', BonusRequestView.as_view(), name='bonus-request'),
-    path('bonus/request/<str:request_id>/', BonusValidationView.as_view(), name='bonus-validate'),
+    path('fixtures/', FixtureList.as_view(), name='fixture_list'),
+
+    # Fixture Detail
+    path('fixtures/<int:fixture_id>/', FixtureDetail.as_view(), name='fixture_detail'),
+
+    # Bonus Request
+    path('bonus-request/', BonusRequestView.as_view(), name='bonus_request'),
+
+    # Bonus Validation
+    path('fixtures/validation/<str:request_id>/', BonusValidationView.as_view(), name='bonus_validation')
 ]
