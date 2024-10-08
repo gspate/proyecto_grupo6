@@ -2,6 +2,7 @@ from django.db import models
 from django.utils import timezone
 import uuid6
 
+
 class Fixture(models.Model):
     fixture_id = models.IntegerField(unique=True)
     referee = models.CharField(max_length=100, null=True, blank=True)
@@ -39,10 +40,11 @@ class Fixture(models.Model):
     def __str__(self):
         return f"Fixture {self.fixture_id}"
 
+
 class Bonos(models.Model):
     request_id = models.UUIDField(unique=True, default=uuid6.uuid6, editable=False)
     fixture = models.ForeignKey('Fixture', on_delete=models.CASCADE)
-    # user_id = models.IntegerField()    
+    user = models.ForeignKey('User', on_delete=models.SET_NULL, null=True, blank=True)  # Asociación con User
     quantity = models.IntegerField()
     datetime = models.DateTimeField(default=timezone.now)
     group_id = models.CharField(max_length=10, null=True, blank=True)
@@ -56,3 +58,16 @@ class Bonos(models.Model):
     def __str__(self):
         return f"Request {self.request_id} for Fixture {self.fixture.fixture_id} - Group {self.group_id}"
 
+
+class User(models.Model):
+    user_id = models.IntegerField(unique=True)
+    username = models.CharField(max_length=100)
+    email = models.EmailField(max_length=100)
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
+    wallet = models.FloatField(default=1000)  # Initial
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"User {self.username} ({self.user_id})"

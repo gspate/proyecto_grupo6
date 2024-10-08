@@ -1,4 +1,3 @@
-# mqtt_suscriber/validations/mqtt_subscriber_validation.py
 import paho.mqtt.client as mqtt
 import json
 import requests
@@ -16,21 +15,29 @@ def on_connect_validation(client, userdata, flags, rc):
     except Exception as e:
         print(f"Error en on_connect_validation: {e}")
 
-@retry(tries=5, delay=2, backoff=2)
+@retry(tries=10, delay=5, backoff=2)
 def send_validation_request(api_url_with_id, data):
-    # Enviar la validación de la solicitud a la API
-    response = requests.put(api_url_with_id, json=data)
-    if response.status_code == 404:
-        raise Exception("Request not found")
-    print(f"Validación de solicitud enviada. Status code: {response.status_code}, Response: {response.text}")
+    try:
+        # Enviar la validación de la solicitud a la API
+        response = requests.put(api_url_with_id, json=data)
+        response.raise_for_status()  # Lanza una excepción si la respuesta no fue exitosa
+        if response.status_code == 404:
+            raise Exception("Request not found")
+        print(f"Validación de solicitud enviada. Status code: {response.status_code}")
+    except requests.exceptions.RequestException as e:
+        print(f"Error al enviar datos a la API: {e}")
+        raise  # Volver a lanzar la excepción para que el decorador @retry la maneje
 
 def on_message_validation(client, userdata, msg):
     try:
         payload = msg.payload.decode("utf-8")
         data = json.loads(payload)
         print(f"Validation recibida: {data}")
+    except json.JSONDecodeError as e:
+        print(f"Error al procesar el mensaje JSON: {e}")
+        return
     except Exception as e:
-        print(f"Error al procesar mensaje: {e}")
+        print(f"Error inesperado al procesar mensaje: {e}")
         return
     
     try:
@@ -46,8 +53,10 @@ def on_message_validation(client, userdata, msg):
         # Enviar la validación de la solicitud a la API
         send_validation_request(api_url_with_id, data)
     except requests.exceptions.RequestException as e:
-        print(f"Error al enviar datos a la API: {e}")
-        
+        print(f"Error al enviar datos a la API")
+    except Exception as e:
+        print(f"Error inesperado: {e}")
+
 client = mqtt.Client()
 client.username_pw_set("students", "iic2173-2024-2-students")
 client.on_connect = on_connect_validation

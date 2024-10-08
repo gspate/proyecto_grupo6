@@ -4,8 +4,8 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import permission_classes
 from django.http import Http404
-from .models import Fixture, Bonos
-from .serializers import FixtureSerializer, BonosSerializer
+from .models import Fixture, Bonos, User
+from .serializers import FixtureSerializer, UserSerializer
 from django.utils.timezone import now
 from datetime import datetime
 import json
@@ -18,6 +18,59 @@ MQTT_HOST = 'broker.iic2173.org'  # Dirección del broker
 MQTT_PORT = 9000                  # Puerto del broker
 MQTT_USER = 'students'            # Usuario
 MQTT_PASSWORD = 'iic2173-2024-2-students'  # Contraseña
+
+
+class UserView(APIView):
+    """
+    Vista para manejar la creación de usuarios (POST) y listar todos los usuarios (GET).
+    """
+
+    # GET: Obtener la lista de todos los usuarios
+    def get(self, request, *args, **kwargs):
+        users = User.objects.all()
+        serializer = UserSerializer(users, many=True)
+        return Response(serializer.data)
+
+    # POST: Crear un nuevo usuario
+    def post(self, request, *args, **kwargs):
+        serializer = UserSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class UserDetailView(APIView):
+    """
+    Vista para obtener (GET), actualizar (PUT), o borrar (DELETE) un usuario específico.
+    """
+
+    def get_object(self, user_id):
+        try:
+            return User.objects.get(user_id=user_id)
+        except User.DoesNotExist:
+            raise Http404
+
+    # GET: Obtener un usuario específico por su user_id
+    def get(self, request, user_id, *args, **kwargs):
+        user = self.get_object(user_id)
+        serializer = UserSerializer(user)
+        return Response(serializer.data)
+
+    # PUT: Actualizar un usuario específico
+    def put(self, request, user_id, *args, **kwargs):
+        user = self.get_object(user_id)
+        serializer = UserSerializer(user, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    # DELETE: Borrar un usuario específico
+    def delete(self, request, user_id, *args, **kwargs):
+        user = self.get_object(user_id)
+        user.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 # Vista para listar y filtrar fixtures (partidos)
 class FixtureList(APIView):
@@ -56,9 +109,9 @@ class FixtureList(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 # Vista para obtener detalles de un fixture específico
 class FixtureDetail(APIView):
-
     def get_object(self, fixture_id):
         try:
             return Fixture.objects.get(fixture_id=fixture_id)
@@ -78,55 +131,69 @@ class FixtureDetail(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-# Vista para manejar solicitudes de compra de bonos desde el canal fixtures/requests
-class BonosView(APIView):
 
+
+class BonosView(APIView):
     def post(self, request, *args, **kwargs):
         request_data = request.data
         fixture_id_request = request_data.get('fixture_id')
+        user_id = request_data.get('user_id')  # Asumiendo que se pasa el user_id en la request
         quantity = int(request_data.get('quantity', 0))  # Cantidad de bonos solicitados
+        cost_per_bonus = 1000  # Precio por cada bono
 
         try:
             fixture = Fixture.objects.get(fixture_id=fixture_id_request)
         except Fixture.DoesNotExist:
             return Response({"error": "Fixture no encontrado"}, status=status.HTTP_404_NOT_FOUND)
 
+        try:
+            user = User.objects.get(user_id=user_id)
+        except User.DoesNotExist:
+            return Response({"error": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Calcular el costo total de los bonos
+        total_cost = cost_per_bonus * quantity
+
+        # Validar si el usuario tiene suficiente dinero en su billetera
+        if user.wallet < total_cost:
+            return Response({"error": "Fondos insuficientes"}, status=status.HTTP_400_BAD_REQUEST)
+
         # Validar si hay suficientes bonos disponibles
         if fixture.available_bonuses >= quantity:
-            # Descontar temporalmente los bonos
+            # Descontar el dinero de la billetera del usuario
+            user.wallet -= total_cost
+            user.save()
+
+            # Descontar temporalmente los bonos disponibles
             fixture.available_bonuses -= quantity
             fixture.save()
 
-            # Convertir la fecha a formato 'YYYY-MM-DD'
-            raw_date = request_data.get('date')
-            formatted_date = datetime.strptime(raw_date[:10], '%Y-%m-%d').date()
+            # Generar un UUIDv6 para el request_id
+            request_id = uuid6.uuid6()  # Esto mantiene el UUIDv6
 
-            # Crear un identificador único para la solicitud
-            request_id = uuid6.uuid6()
-
-            # Crear una nueva solicitud de bono (BonusRequest)
+            # Crear la solicitud de bono
             bonus_request = Bonos.objects.create(
-                request_id=request_id,
+                request_id=request_id,  # Mantener UUIDv6 aquí
                 fixture=fixture,
+                user=user,  # Asocia el bono con el usuario
                 quantity=quantity,
                 group_id=request_data.get('group_id'),
                 league_name=request_data.get('league_name'),
                 round=request_data.get('round'),
-                date=time.now(),  # Fecha corregida
+                date=timezone.now(),
                 result=request_data.get('result', '---'),
                 seller=request_data.get('seller', 0)
             )
 
-            # Datos JSON que quieres enviar
+            # Publicar los datos en MQTT
             data = {
-                "request_id": request_id,
-                "fixture": fixture,
+                "request_id": str(bonus_request.request_id),  # Convertir UUIDv6 a string
+                "fixture": fixture.fixture_id,
                 "quantity": quantity,
                 "group_id": request_data.get('group_id'),
                 "league_name": request_data.get('league_name'),
                 "round": request_data.get('round'),
-                "date": time.now(),
+                "date": timezone.now(),
                 "result": request_data.get('result', '---'),
                 "seller": request_data.get('seller', 0)
             }
@@ -134,7 +201,6 @@ class BonosView(APIView):
             # Convertir el diccionario a una cadena JSON
             json_data = json.dumps(data)
 
-            # Publicar el mensaje JSON usando publish.single
             publish.single(
                 topic='fixtures/request',
                 payload=json_data,
@@ -144,13 +210,13 @@ class BonosView(APIView):
             )
 
             return Response({
-                "request_id": bonus_request.request_id,
-                "message": "Bonos reservados temporalmente"
+                "request_id": str(bonus_request.request_id),  # Asegúrate de que el UUIDv6 se devuelva como string
+                "message": "Bonos comprados y dinero descontado exitosamente"
             }, status=status.HTTP_201_CREATED)
         else:
             return Response({"error": "No hay suficientes bonos disponibles"}, status=status.HTTP_400_BAD_REQUEST)
-    
-# Vista para manejar solicitudes de compra de bonos desde el canal fixtures/requests
+
+
 class BonusRequestView(APIView):
     """
     Vista para crear una solicitud de bonos (BonusRequest).
@@ -166,15 +232,19 @@ class BonusRequestView(APIView):
         except Fixture.DoesNotExist:
             return Response({"error": "Fixture no encontrado"}, status=status.HTTP_404_NOT_FOUND)
 
+        # Extraer y formatear la fecha
+        raw_date = request_data.get('date')
+        try:
+            # Convertir la fecha de "YYYY-MM-DDThh:mm:ssZ" a "YYYY-MM-DD"
+            formatted_date = datetime.strptime(raw_date[:10], '%Y-%m-%d').date()
+        except ValueError:
+            return Response({"error": "Formato de fecha inválido"}, status=status.HTTP_400_BAD_REQUEST)
+
         # Validar si hay suficientes bonos disponibles
         if fixture.available_bonuses >= quantity:
             # Descontar temporalmente los bonos
             fixture.available_bonuses -= quantity
             fixture.save()
-
-            # Convertir la fecha a formato 'YYYY-MM-DD'
-            raw_date = request_data.get('date')
-            formatted_date = datetime.strptime(raw_date[:10], '%Y-%m-%d').date()
 
             # Crear una nueva solicitud de bono (BonusRequest)
             bonus_request = Bonos.objects.create(
@@ -186,7 +256,8 @@ class BonusRequestView(APIView):
                 round=request_data.get('round'),
                 date=formatted_date,  # Fecha corregida
                 result=request_data.get('result', '---'),
-                seller=request_data.get('seller', 0)
+                seller=request_data.get('seller', 0),
+                datetime=request_data.get('datetime')  # Usar el datetime que ya viene en el payload
             )
 
             return Response({
@@ -196,10 +267,9 @@ class BonusRequestView(APIView):
         else:
             return Response({"error": "No hay suficientes bonos disponibles"}, status=status.HTTP_400_BAD_REQUEST)
 
+
 # Vista para procesar validaciones de solicitudes de bonos desde el canal fixtures/validation
 class BonusValidationView(APIView):
-    
-
     def put(self, request, request_id, *args, **kwargs):
         # Extraer la validación y el request_id
         validation_data = request.data

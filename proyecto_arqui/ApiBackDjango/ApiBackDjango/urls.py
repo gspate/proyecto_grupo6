@@ -24,13 +24,13 @@ urlpatterns = [
 
     # MQTT (No USUARIOS)
     path('mqtt/requests', BonusRequestView.as_view(), name='bonus_request'),
-    path('mqtt/validations/<str:request_id>', BonusValidationView.as_view(), name='bonus_validation')
+    path('mqtt/validations/<str:request_id>', BonusValidationView.as_view(), name='bonus_validation'),
 
     # Usuarios
     # path('users', UserView.as_view(), name='user_list'),
     # path('users/<int:id>', UserDetailView.as_view(), name='user_list'),
 
     # Bonos
-    # path('bonos', BonosView.as_view(), name='bonos_list'),
+    path('bonos', BonosView.as_view(), name='bonos_list')
     # path('bonos/<str:requests_id>', BonosView.as_view(), name='bonos_list'),
 ]
