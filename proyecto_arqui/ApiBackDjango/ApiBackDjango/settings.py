@@ -28,7 +28,12 @@ DEBUG = True
 # Quizas esto sea necesario cambiarlo en la instancia EC2 (por el dominio)
 ALLOWED_HOSTS = ['api', 'localhost', '127.0.0.1', 'arqui-2024-gspate.me', 'www.arqui-2024-gspate.me']
 
-# Application definition
+# # Application definition
+# REST_FRAMEWORK = {
+#     'DEFAULT_AUTHENTICATION_CLASSES': (
+#         'rest_framework_simplejwt.authentication.JWTAuthentication',
+#     ),
+# }
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -39,7 +44,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'fixtures',
-    'accounts',
 ]
 
 MIDDLEWARE = [

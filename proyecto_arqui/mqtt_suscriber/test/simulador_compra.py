@@ -51,7 +51,7 @@ def simulate_bonus_purchase(fixture_id, league_name, round_name, date, result, q
 # Ejemplo de uso
 if __name__ == "__main__":
     # Parámetros de la compra de bono (puedes modificar según tus necesidades)
-    fixture_id = 1208082
+    fixture_id = 1100274
     league_name = "La Liga"
     round_name = "Regular Season - 9"
     date = "2024-09-29T19:00:00Z"
