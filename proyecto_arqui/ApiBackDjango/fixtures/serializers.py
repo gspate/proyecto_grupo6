@@ -11,8 +11,7 @@ class BonosSerializer(serializers.ModelSerializer):
     class Meta:
         model = Bonos
         fields = [
-            'request_id', 'fixture', 'quantity', 'status', 
-            'datetime', 'group_id', 'league_name', 'round', 
+            'request_id', 'fixture', 'user', 'quantity', 'datetime', 'group_id', 'league_name', 'round', 
             'date', 'result', 'deposit_token', 'seller'
         ]
 

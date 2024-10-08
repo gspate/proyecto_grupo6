@@ -60,8 +60,21 @@ services:
   mqtt-subscriber-validation:
     depends_on:
       - api
+      - mqtt-subscriber-requests
     build:
       context: ../mqtt_suscriber/validations
+      dockerfile: Dockerfile
+    networks:
+      - app-network
+    environment:
+      - MQTT_BROKER_URL=broker.iic2173.org
+      - MQTT_BROKER_PORT=9000
+
+  mqtt-subscriber-history:
+    depends_on:
+      - api
+    build:
+      context: ../mqtt_suscriber/history
       dockerfile: Dockerfile
     networks:
       - app-network

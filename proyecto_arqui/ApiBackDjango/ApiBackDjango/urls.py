@@ -15,7 +15,7 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.urls import path
-from fixtures.views import FixtureList, FixtureDetail, BonusRequestView, BonusValidationView, BonosView
+from fixtures.views import FixtureList, FixtureDetail, BonusRequestView, BonusValidationView, BonosView, BonusHistoryView, UserView, UserDetailView
 
 urlpatterns = [
     # Fixtures
@@ -25,12 +25,13 @@ urlpatterns = [
     # MQTT (No USUARIOS)
     path('mqtt/requests', BonusRequestView.as_view(), name='bonus_request'),
     path('mqtt/validations/<str:request_id>', BonusValidationView.as_view(), name='bonus_validation'),
+    path('mqtt/history', BonusHistoryView.as_view(), name='bonus_history'),
 
     # Usuarios
-    # path('users', UserView.as_view(), name='user_list'),
-    # path('users/<int:id>', UserDetailView.as_view(), name='user_list'),
+    path('users', UserView.as_view(), name='user_list'),
+    path('users/<int:id>', UserDetailView.as_view(), name='user_detail'),
 
     # Bonos
     path('bonos', BonosView.as_view(), name='bonos_list')
-    # path('bonos/<str:requests_id>', BonosView.as_view(), name='bonos_list'),
+    # path('bonos/<str:requests_id>', BonosView.as_view(), name='bonos_list'), 
 ]

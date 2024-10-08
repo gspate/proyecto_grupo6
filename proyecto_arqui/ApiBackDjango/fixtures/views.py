@@ -3,15 +3,20 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import permission_classes
-from django.http import Http404
-from .models import Fixture, Bonos, User
-from .serializers import FixtureSerializer, UserSerializer
+from django.http import JsonResponse, Http404
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 from django.utils.timezone import now
+from django.views import View
+from .models import Fixture, Bonos, User
+from .serializers import FixtureSerializer, BonosSerializer, UserSerializer
 from datetime import datetime
-import json
 import paho.mqtt.publish as publish
+import json
 import time
 import uuid6
+
+
 
 # Configuración del broker MQTT
 MQTT_HOST = 'broker.iic2173.org'  # Dirección del broker
@@ -19,7 +24,7 @@ MQTT_PORT = 9000                  # Puerto del broker
 MQTT_USER = 'students'            # Usuario
 MQTT_PASSWORD = 'iic2173-2024-2-students'  # Contraseña
 
-
+# /users
 class UserView(APIView):
     """
     Vista para manejar la creación de usuarios (POST) y listar todos los usuarios (GET).
@@ -39,6 +44,7 @@ class UserView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+# /users/<user_id>
 class UserDetailView(APIView):
     """
     Vista para obtener (GET), actualizar (PUT), o borrar (DELETE) un usuario específico.
@@ -71,8 +77,7 @@ class UserDetailView(APIView):
         user.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-
-# Vista para listar y filtrar fixtures (partidos)
+# /fixtures
 class FixtureList(APIView):
     """
     Vista para listar y crear partidos (fixtures).
@@ -109,7 +114,7 @@ class FixtureList(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
+# /fixtures/<fixture_id>
 class FixtureDetail(APIView):
     """
     Vista para obtener (GET) o actualizar (PUT) un fixture específico.
@@ -134,8 +139,16 @@ class FixtureDetail(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
+# bonos
+# Esta vista esta en desarrollo, no esta terminada
 class BonosView(APIView):
+
+    # GET: Obtener la lista de todos los usuarios
+    def get(self, request, *args, **kwargs):
+        bonos = Bonos.objects.all()
+        serializer = BonosSerializer(bonos, many=True)
+        return Response(serializer.data)
+
     def post(self, request, *args, **kwargs):
         request_data = request.data
         fixture_id_request = request_data.get('fixture_id')
@@ -162,7 +175,7 @@ class BonosView(APIView):
 
         # Validar si hay suficientes bonos disponibles
         if fixture.available_bonuses >= quantity:
-            # Descontar el dinero de la billetera del usuario
+            # Descontar temporalmente el dinero de la billetera del usuario
             user.wallet -= total_cost
             user.save()
 
@@ -218,11 +231,12 @@ class BonosView(APIView):
         else:
             return Response({"error": "No hay suficientes bonos disponibles"}, status=status.HTTP_400_BAD_REQUEST)
 
-
+# mqtt/request
 class BonusRequestView(APIView):
     """
     Vista para almacenar solicitudes de compra de bonos desde el canal fixtures/requests.
     """
+
 
     def post(self, request, *args, **kwargs):
         request_data = request.data
@@ -270,7 +284,8 @@ class BonusRequestView(APIView):
             return Response({"error": "No hay suficientes bonos disponibles"}, status=status.HTTP_400_BAD_REQUEST)
 
 
-
+# mqtt/validation
+# Esta vista debe ser actualizada para devolver el dinero gastado al usuario en caso de que una solicitud sea rechazada.
 class BonusValidationView(APIView):
     """
     Vista para procesar validaciones de solicitudes de bonos desde el canal fixtures/validation.
@@ -310,3 +325,65 @@ class BonusValidationView(APIView):
             return Response({
                 "message": f"Compra con request_id {request_id} rechazada. Bonos devueltos."
             }, status=status.HTTP_400_BAD_REQUEST)
+
+
+# mqtt/history
+@method_decorator(csrf_exempt, name='dispatch')
+class BonusHistoryView(View):
+
+    def post(self, request, *args, **kwargs):
+        # Paso 1: Obtener y decodificar el JSON del request
+        data = json.loads(request.body)
+        fixtures = data.get('fixtures', [])
+
+        if not fixtures:
+            return JsonResponse({"error": "No fixtures found in the request"}, status=400)
+
+        for fixture_data in fixtures:
+            fixture_info = fixture_data.get('fixture')
+            goals_info = fixture_data.get('goals')
+
+            # Paso 2: Buscar si la fixture existe en la base de datos
+            try:
+                fixture = Fixture.objects.get(fixture_id=fixture_info['id'])
+            except Fixture.DoesNotExist:
+                return JsonResponse({"error": "Fixture not found"}, status=404)
+
+            # Paso 3: Determinar el ganador
+            home_goals = goals_info.get('home', 0)
+            away_goals = goals_info.get('away', 0)
+
+            if home_goals > away_goals:
+                match_result = 'home'
+                odds_value = fixture.odds_home_value
+            elif away_goals > home_goals:
+                match_result = 'away'
+                odds_value = fixture.odds_away_value
+            else:
+                match_result = 'draw'
+                odds_value = fixture.odds_draw_value
+
+            if not odds_value:
+                return JsonResponse({"error": "Odds not found for the result"}, status=400)
+
+            # Paso 4: Buscar todos los bonos relacionados con la fixture
+            bonos = Bonos.objects.filter(fixture=fixture).select_related('user')
+
+            for bono in bonos:
+                # Paso 5: Validar si el resultado del bono coincide con el del partido
+                if bono.result == match_result:
+                    # Calcular la cantidad a acreditar en la wallet
+                    amount_to_credit = bono.quantity * 1000 * odds_value
+
+                    # Obtener al usuario asociado al bono
+                    user = bono.user
+                    if user:
+                        # Actualizar la wallet del usuario
+                        user.wallet += amount_to_credit
+                        user.save()
+
+                        # Notificar el crédito realizado
+                        print(f"Usuario {user.username} recibió {amount_to_credit} por el partido {fixture.fixture_id}")
+
+        # Devolver una respuesta de éxito
+        return JsonResponse({"status": "success", "message": "Bonos procesados correctamente"})
