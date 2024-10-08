@@ -19,4 +19,4 @@ EXPOSE 8000
 
 # Run the migrations and start the server
 ENTRYPOINT ["sh", "-c"]
-CMD ["python manage.py migrate && python manage.py runserver 0.0.0.0:8000"] 
+CMD ["python -u manage.py makemigrations && python -u manage.py migrate && python -u manage.py runserver 0.0.0.0:8000"]

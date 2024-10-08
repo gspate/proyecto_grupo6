@@ -7,4 +7,4 @@ datetime
 paho-mqtt
 psycopg2-binary
 requests
-uuid
+uuid6

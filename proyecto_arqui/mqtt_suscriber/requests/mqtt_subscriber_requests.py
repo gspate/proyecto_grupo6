@@ -3,7 +3,7 @@ import paho.mqtt.client as mqtt
 import json
 import requests
 
-API_URL = "http://api:8000/bonus/request"
+API_URL = "http://api:8000/mqtt/requests"
 
 def on_connect_requests(client, userdata, flags, rc):
     try:

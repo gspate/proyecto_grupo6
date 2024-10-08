@@ -4,7 +4,7 @@ import json
 import requests
 from retry import retry
 
-API_URL = "http://api:8000/bonus/request"
+API_URL = "http://api:8000/mqtt/validations"
 
 def on_connect_validation(client, userdata, flags, rc):
     try:

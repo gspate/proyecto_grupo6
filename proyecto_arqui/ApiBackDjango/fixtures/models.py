@@ -39,14 +39,15 @@ class Fixture(models.Model):
     def __str__(self):
         return f"Fixture {self.fixture_id}"
 
-class BonusRequest(models.Model):
+class Bonos(models.Model):
     request_id = models.UUIDField(unique=True, default=uuid.uuid4, editable=False)
     fixture = models.ForeignKey('Fixture', on_delete=models.CASCADE)
+    # user_id = models.IntegerField()    
     quantity = models.IntegerField()
     datetime = models.DateTimeField(default=timezone.now)
     group_id = models.CharField(max_length=10, null=True, blank=True)
-    league_name = models.CharField(max_length=100, default='Unknown League')  # Valor predeterminado
-    round = models.CharField(max_length=100, default='Regular Season')  # Valor predeterminado
+    league_name = models.CharField(max_length=100, default='Unknown League')
+    round = models.CharField(max_length=100, default='Regular Season')
     date = models.DateField(default=timezone.now)
     result = models.CharField(max_length=50, default='---')
     deposit_token = models.CharField(max_length=100, blank=True, null=True)
@@ -54,3 +55,4 @@ class BonusRequest(models.Model):
 
     def __str__(self):
         return f"Request {self.request_id} for Fixture {self.fixture.fixture_id} - Group {self.group_id}"
+

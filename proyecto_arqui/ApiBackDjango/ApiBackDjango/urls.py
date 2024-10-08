@@ -15,17 +15,22 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.urls import path
-from fixtures.views import FixtureList, FixtureDetail, BonusRequestView, BonusValidationView
+from fixtures.views import FixtureList, FixtureDetail, BonusRequestView, BonusValidationView, BonosView
 
 urlpatterns = [
-    path('fixtures/', FixtureList.as_view(), name='fixture_list'),
+    # Fixtures
+    path('fixtures', FixtureList.as_view(), name='fixture_list'),
+    path('fixtures/<str:fixture_id>', FixtureDetail.as_view(), name='fixture_detail'),
 
-    # Fixture Detail
-    path('fixtures/<int:fixture_id>/', FixtureDetail.as_view(), name='fixture_detail'),
+    # MQTT (No USUARIOS)
+    path('mqtt/requests', BonusRequestView.as_view(), name='bonus_request'),
+    path('mqtt/validations/<str:request_id>', BonusValidationView.as_view(), name='bonus_validation')
 
-    # Bonus Request
-    path('bonus-request/', BonusRequestView.as_view(), name='bonus_request'),
+    # Usuarios
+    # path('users', UserView.as_view(), name='user_list'),
+    # path('users/<int:id>', UserDetailView.as_view(), name='user_list'),
 
-    # Bonus Validation
-    path('fixtures/validation/<str:request_id>/', BonusValidationView.as_view(), name='bonus_validation')
+    # Bonos
+    # path('bonos', BonosView.as_view(), name='bonos_list'),
+    # path('bonos/<str:requests_id>', BonosView.as_view(), name='bonos_list'),
 ]
