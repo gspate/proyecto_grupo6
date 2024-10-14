@@ -3,7 +3,7 @@ import paho.mqtt.client as mqtt
 import json
 import requests
 
-API_URL = "http://api:8000/bonus/request"
+API_URL = "http://api:8000/mqtt/requests"
 
 def on_connect_requests(client, userdata, flags, rc):
     try:
@@ -28,6 +28,11 @@ def on_message_requests(client, userdata, msg):
         # Enviar la solicitud de compra de bonos a la API
         response = requests.post(API_URL, json=data)
         print(f"Solicitud de compra enviada. Status code: {response.status_code}")
+
+        # Verificar si el request fue exitoso antes de continuar
+        if response.status_code != 201:
+            print(f"Error al crear la request en la API. Status code: {response.status_code}")
+            return
     except requests.exceptions.RequestException as e:
         print(f"Error al enviar datos a la API: {e}")
 

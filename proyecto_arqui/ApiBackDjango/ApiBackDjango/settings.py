@@ -28,7 +28,12 @@ DEBUG = True
 # Quizas esto sea necesario cambiarlo en la instancia EC2 (por el dominio)
 ALLOWED_HOSTS = ['api', 'localhost', '127.0.0.1', 'arqui-2024-gspate.me', 'www.arqui-2024-gspate.me']
 
-# Application definition
+# # Application definition
+# REST_FRAMEWORK = {
+#     'DEFAULT_AUTHENTICATION_CLASSES': (
+#         'rest_framework_simplejwt.authentication.JWTAuthentication',
+#     ),
+# }
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -38,8 +43,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'corsheaders',
     'fixtures',
-    'wallet',
 ]
 
 MIDDLEWARE = [
@@ -47,11 +52,15 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.CommonMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'ApiBackDjango.middleware.jwt_required',
 ]
+
+CORS_ALLOW_ALL_ORIGINS = True
 
 ROOT_URLCONF = 'ApiBackDjango.urls'
 
