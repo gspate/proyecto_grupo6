@@ -7,22 +7,15 @@ from django.http import JsonResponse, Http404
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.utils.timezone import now
-<<<<<<< HEAD
 from django.views import View
 from .models import Fixture, Bonos, User
 from .serializers import FixtureSerializer, BonosSerializer, UserSerializer
-=======
-
-
-
->>>>>>> main
 from datetime import datetime
 import paho.mqtt.publish as publish
 import json
 import time
 import uuid6
 
-<<<<<<< HEAD
 # Configuración del broker MQTT
 MQTT_HOST = 'broker.iic2173.org'  # Dirección del broker
 MQTT_PORT = 9000                  # Puerto del broker
@@ -34,23 +27,6 @@ class UserView(APIView):
     """
     Vista para manejar la creación de usuarios (POST) y listar todos los usuarios (GET).
     """
-=======
-
-# Vista para listar y filtrar fixtures (partidos)
-class FixtureList(generics.ListCreateAPIView):
-    serializer_class = FixtureSerializer
-
-
-    queryset = Fixture.objects.filter(date__gte=now())  # Solo partidos futuros
-    pagination_class = None  # Personaliza la paginación aquí si es necesario
-
-
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        home_team = self.request.query_params.get('home')
-        away_team = self.request.query_params.get('away')
-        date = self.request.query_params.get('date')
->>>>>>> main
 
     # GET: Obtener la lista de todos los usuarios
     def get(self, request, *args, **kwargs):
@@ -147,7 +123,6 @@ class FixtureDetail(APIView):
         except Fixture.DoesNotExist:
             raise Http404
 
-<<<<<<< HEAD
     # Manejar GET (obtener un fixture por fixture_id)
     def get(self, request, fixture_id, *args, **kwargs):
         fixture = self.get_object(fixture_id)
@@ -161,12 +136,6 @@ class FixtureDetail(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-=======
-
-# Vista para manejar solicitudes de compra de bonos desde el canal fixtures/requests
-class BonusRequestView(generics.CreateAPIView):
-    serializer_class = BonusRequestSerializer
->>>>>>> main
 
 # bonos
 # Esta vista esta en desarrollo, no esta terminada
@@ -358,7 +327,6 @@ class BonusValidationView(APIView):
                 "message": f"Compra con request_id {request_id} rechazada. Bonos devueltos."
             }, status=status.HTTP_400_BAD_REQUEST)
 
-<<<<<<< HEAD
 
 # mqtt/history
 @method_decorator(csrf_exempt, name='dispatch')
@@ -420,5 +388,3 @@ class BonusHistoryView(View):
 
         # Devolver una respuesta de éxito
         return JsonResponse({"status": "success", "message": "Bonos procesados correctamente"})
-=======
->>>>>>> main
