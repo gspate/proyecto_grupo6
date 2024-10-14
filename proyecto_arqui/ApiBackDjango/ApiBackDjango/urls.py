@@ -29,7 +29,7 @@ urlpatterns = [
 
     # Usuarios
     path('users', UserView.as_view(), name='user_list'),
-    path('users/<int:id>', UserDetailView.as_view(), name='user_detail'),
+    path('users/<int:user_id>', UserDetailView.as_view(), name='user_detail'),
 
     # Bonos
     path('bonos', BonosView.as_view(), name='bonos_list')

@@ -16,8 +16,6 @@ import json
 import time
 import uuid6
 
-
-
 # Configuración del broker MQTT
 MQTT_HOST = 'broker.iic2173.org'  # Dirección del broker
 MQTT_PORT = 9000                  # Puerto del broker
@@ -30,11 +28,11 @@ class UserView(APIView):
     Vista para manejar la creación de usuarios (POST) y listar todos los usuarios (GET).
     """
 
-    # # GET: Obtener la lista de todos los usuarios
-    # def get(self, request, *args, **kwargs):
-    #     users = User.objects.all()
-    #     serializer = UserSerializer(users, many=True)
-    #     return Response(serializer.data)
+    # GET: Obtener la lista de todos los usuarios
+    def get(self, request, *args, **kwargs):
+        users = User.objects.all()
+        serializer = UserSerializer(users, many=True)
+        return Response(serializer.data)
 
     # POST: Crear un nuevo usuario
     def post(self, request, *args, **kwargs):
@@ -149,6 +147,7 @@ class BonosView(APIView):
         serializer = BonosSerializer(bonos, many=True)
         return Response(serializer.data)
 
+    # POST: compra de bono
     def post(self, request, *args, **kwargs):
         request_data = request.data
         fixture_id_request = request_data.get('fixture_id')
@@ -195,9 +194,10 @@ class BonosView(APIView):
                 group_id=request_data.get('group_id'),
                 league_name=request_data.get('league_name'),
                 round=request_data.get('round'),
-                date=timezone.now(),
+                date=datetime.now(),
                 result=request_data.get('result', '---'),
-                seller=request_data.get('seller', 0)
+                seller=request_data.get('seller', 0),
+                wallet=request_data.get('wallet')
             )
 
             # Publicar los datos en MQTT
@@ -208,9 +208,10 @@ class BonosView(APIView):
                 "group_id": request_data.get('group_id'),
                 "league_name": request_data.get('league_name'),
                 "round": request_data.get('round'),
-                "date": timezone.now(),
+                "date": datetime.now(),
                 "result": request_data.get('result', '---'),
-                "seller": request_data.get('seller', 0)
+                "seller": request_data.get('seller', 0),
+                "wallet": request_data.get('wallet')
             }
 
             # Convertir el diccionario a una cadena JSON
@@ -236,7 +237,6 @@ class BonusRequestView(APIView):
     """
     Vista para almacenar solicitudes de compra de bonos desde el canal fixtures/requests.
     """
-
 
     def post(self, request, *args, **kwargs):
         request_data = request.data
@@ -273,6 +273,7 @@ class BonusRequestView(APIView):
                 date=formatted_date,  # Fecha corregida
                 result=request_data.get('result', '---'),
                 seller=request_data.get('seller', 0),
+                wallet=request_data.get('wallet'),
                 datetime=request_data.get('datetime')  # Usar el datetime que ya viene en el payload
             )
 

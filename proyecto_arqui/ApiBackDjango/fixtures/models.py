@@ -40,8 +40,8 @@ class Fixture(models.Model):
     def __str__(self):
         return f"Fixture {self.fixture_id}"
 
-
 class Bonos(models.Model):
+
     request_id = models.UUIDField(unique=True, default=uuid6.uuid6, editable=False)
     fixture = models.ForeignKey('Fixture', on_delete=models.CASCADE)
     user = models.ForeignKey('User', on_delete=models.SET_NULL, null=True, blank=True)  # Asociación con User
@@ -53,6 +53,7 @@ class Bonos(models.Model):
     date = models.DateField(default=timezone.now)
     result = models.CharField(max_length=50, default='---')
     deposit_token = models.CharField(max_length=100, blank=True, null=True)
+    wallet = models.BooleanField()
     seller = models.IntegerField(default=0)
 
     def __str__(self):
@@ -65,7 +66,7 @@ class User(models.Model):
     email = models.EmailField(max_length=100)
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
-    wallet = models.FloatField(default=1000)  # Initial
+    wallet = models.FloatField(default=1000)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
