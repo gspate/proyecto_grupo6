@@ -41,7 +41,6 @@ class Fixture(models.Model):
         return f"Fixture {self.fixture_id}"
 
 class Bonos(models.Model):
-
     request_id = models.UUIDField(unique=True, default=uuid6.uuid6, editable=False)
     fixture = models.ForeignKey('Fixture', on_delete=models.CASCADE)
     user = models.ForeignKey('User', on_delete=models.SET_NULL, null=True, blank=True)  # Asociación con User
