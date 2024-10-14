@@ -232,7 +232,7 @@ class BonosView(APIView):
         else:
             return Response({"error": "No hay suficientes bonos disponibles"}, status=status.HTTP_400_BAD_REQUEST)
 
-# mqtt/request
+# mqtt/requests
 class BonusRequestView(APIView):
     """
     Vista para almacenar solicitudes de compra de bonos desde el canal fixtures/requests.
@@ -285,7 +285,7 @@ class BonusRequestView(APIView):
             return Response({"error": "No hay suficientes bonos disponibles"}, status=status.HTTP_400_BAD_REQUEST)
 
 
-# mqtt/validation
+# mqtt/validations
 # Esta vista debe ser actualizada para devolver el dinero gastado al usuario en caso de que una solicitud sea rechazada.
 class BonusValidationView(APIView):
     """
@@ -329,7 +329,6 @@ class BonusValidationView(APIView):
 
 
 # mqtt/history
-@method_decorator(csrf_exempt, name='dispatch')
 class BonusHistoryView(View):
 
     def post(self, request, *args, **kwargs):

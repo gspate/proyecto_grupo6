@@ -27,14 +27,24 @@ def on_message_requests(client, userdata, msg):
     try:
         # Enviar la solicitud de compra de bonos a la API
         response = requests.post(API_URL, json=data)
-        print(f"Solicitud de compra enviada. Status code: {response.status_code}")
 
-        # Verificar si el request fue exitoso antes de continuar
-        if response.status_code != 201:
-            print(f"Error al crear la request en la API. Status code: {response.status_code}")
-            return
-    except requests.exceptions.RequestException as e:
-        print(f"Error al enviar datos a la API: {e}")
+        # Verificar si la solicitud fue exitosa (código 201 es éxito para creación)
+        response.raise_for_status()
+
+        # Si fue exitosa, mostrar la respuesta
+        print(f"Solicitud de compra enviada. Response: {response.json()}")
+
+    except requests.exceptions.HTTPError as http_err:
+        # Capturamos errores HTTP y mostramos la respuesta de error de Django
+        try:
+            error_response = response.json()
+            print(f"Error HTTP: {http_err}, Response: {error_response}")
+        except ValueError:
+            print(f"Error HTTP: {http_err}, pero no se pudo parsear el cuerpo de la respuesta.")
+
+    except requests.exceptions.RequestException as req_err:
+        # Captura otros errores relacionados con la solicitud
+        print(f"Error al enviar datos a la API: {req_err}")
 
 client = mqtt.Client()
 client.username_pw_set("students", "iic2173-2024-2-students")
