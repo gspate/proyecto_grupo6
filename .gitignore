@@ -1,0 +1,7 @@
+
+proyecto_arqui/ApiBackDjango/.env
+proyecto_arqui/ApiBackDjango/fixtures/__pycache__/serializers.cpython-312.pyc
+proyecto_arqui/ApiBackDjango/fixtures/__pycache__/views.cpython-312.pyc
+proyecto_arqui/ApiBackDjango/wallet/__pycache__/__init__.cpython-312.pyc
+proyecto_arqui/ApiBackDjango/wallet/__pycache__/admin.cpython-312.pyc
+*.pyc

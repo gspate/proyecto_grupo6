@@ -14,6 +14,7 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+<<<<<<< HEAD
 from django.urls import path
 from fixtures.views import FixtureList, FixtureDetail, BonusRequestView, BonusValidationView, BonosView, BonusHistoryView, UserView, UserDetailView
 
@@ -34,4 +35,20 @@ urlpatterns = [
     # Bonos
     path('bonos', BonosView.as_view(), name='bonos_list')
     # path('bonos/<str:requests_id>', BonosView.as_view(), name='bonos_list'), 
+=======
+
+from django.contrib import admin, auth
+from django.urls import path, re_path
+from wallet.views import WalletInfoView
+from fixtures.views import FixtureList, FixtureDetail, BonusRequestView, BonusValidationView
+
+urlpatterns = [
+    path('wallet/', WalletInfoView.as_view(), name='wallet_info'), #Valores wallet user, JWT
+    re_path(r'^wallet$', WalletInfoView.as_view(), name='wallet_info_redirect'),  # Redirección
+    path('fixtures', FixtureList.as_view(), name='fixture-list'),
+    path('fixtures/<int:fixture_id>', FixtureDetail.as_view(), name='fixture-detail'),
+    path('bonus/request', BonusRequestView.as_view(), name='bonus-request'),
+    path('bonus/request/<str:request_id>/', BonusValidationView.as_view(), name='bonus-validate'),
+>>>>>>> main
 ]
+
