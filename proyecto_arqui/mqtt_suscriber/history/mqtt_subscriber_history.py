@@ -17,39 +17,47 @@ def on_connect_history(client, userdata, flags, rc):
 def on_message_history(client, userdata, msg):
     try:
         payload = msg.payload.decode("utf-8")
-        print(f"Payload recibido: {payload}")  # Ver qué contiene el payload
+        # print(f"Payload recibido: {payload}")  # Ver qué contiene el payload
         
         # Asegurarse de que el payload es un JSON válido
-        if isinstance(payload, str):
-            try:
-                data = json.loads(payload)  # Decodificar el payload si es un string
-                print(f"Payload decodificado correctamente: {data}")
-            except json.JSONDecodeError as e:
-                print(f"Error al decodificar el JSON: {e}")
-                return  # Terminar la función si falla la decodificación
-        else:
-            data = payload  # Si ya es un diccionario, úsalo tal cual
+        try:
+            data = json.loads(payload)  # Decodificar el payload
+            if isinstance(data, str):
+                # print("El payload está doblemente codificado. Intentando decodificar nuevamente.")
+                data = json.loads(data)  # Decodificar el string nuevamente
+            # print(f"Payload decodificado correctamente: {data}")
+            # print(f"Tipo de data decodificada: {type(data)}")  # Imprimir el tipo de data
+        except json.JSONDecodeError as e:
+            print(f"Error al decodificar el JSON: {e}")
+            return  # Terminar la función si falla la decodificación
 
-        # Asegurarse de que 'data' es un diccionario
+        # Comprobar si el data es un diccionario
         if isinstance(data, dict):
-            # Verificar que se recibieron fixtures
+            print("El payload es un diccionario válido")
             fixtures = data.get("fixtures", [])
             if not fixtures:
                 print("No se encontraron fixtures en el mensaje recibido")
                 return
 
             # Enviar los datos a la API usando una solicitud POST
-            response = requests.post(API_URL, json=data)
-            if response.status_code == 200:
-                print("Datos enviados a la API correctamente")
-            else:
-                print(f"Error al enviar datos a la API. Código: {response.status_code}")
-            response.raise_for_status()  # Lanza una excepción si hay algún error
+            # print(f"Data a enviar a la API: {data}")
+            print(f"Enviando datos a la API en {API_URL}")
+            try:
+                response = requests.post(API_URL, json=data)
+                if response.status_code == 200:
+                    print("Datos enviados a la API correctamente")
+                    print(f"Contenido de la respuesta: {response.text}")
+                else:
+                    print(f"Error al enviar datos a la API. Código de estado: {response.status_code}")
+                    print(f"Contenido de la respuesta: {response.text}")  # Mostrar la respuesta de la API
+                response.raise_for_status()  # Lanza una excepción si hay algún error
+            except requests.exceptions.RequestException as e:
+                print(f"Error al intentar enviar los datos: {e}")
         else:
             print("El payload no es un diccionario válido")
 
-    except requests.exceptions.RequestException as e:
-        print(f"Error al intentar enviar los datos: {e}")
+    except Exception as e:
+        print(f"Error inesperado: {e}")
 
 # Configuración del cliente MQTT
 client = mqtt.Client()
