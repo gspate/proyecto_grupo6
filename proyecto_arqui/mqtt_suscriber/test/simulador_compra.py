@@ -77,7 +77,7 @@ def send_existing_bonus_request():
     message = {
         "request_id": "f1d5a24e-4bd9-4ac7-b401-0be8f5e8cc5e",
         "group_id": "24",
-        "fixture_id": 1100281,
+        "fixture_id": 1208578,
         "league_name": "UEFA Champions|League",
         "round": "Group Stage - 10",
         "date": "2024-10-16T00:00:00.000Z",

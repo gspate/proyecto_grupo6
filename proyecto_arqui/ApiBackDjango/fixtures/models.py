@@ -41,6 +41,13 @@ class Fixture(models.Model):
         return f"Fixture {self.fixture_id}"
 
 class Bonos(models.Model):
+    ESTADOS_BONO = [
+        ('pendiente', 'Pendiente de Validación'),
+        ('ganado', 'Ganado - Pagado'),
+        ('perdido', 'Perdido - No Pagado'),
+        ('procesado', 'Procesado - Sin Acción'),
+    ]
+
     request_id = models.UUIDField(unique=True, default=uuid6.uuid6, editable=False)
     fixture = models.ForeignKey('Fixture', on_delete=models.CASCADE)
     user = models.ForeignKey('User', on_delete=models.SET_NULL, null=True, blank=True)  # Asociación con User
@@ -54,6 +61,7 @@ class Bonos(models.Model):
     deposit_token = models.CharField(max_length=100, blank=True, null=True)
     wallet = models.BooleanField()
     seller = models.IntegerField(default=0)
+    status = models.CharField(max_length=10, choices=ESTADOS_BONO, default='pendiente')
 
     def __str__(self):
         return f"Request {self.request_id} for Fixture {self.fixture.fixture_id} - Group {self.group_id}"
