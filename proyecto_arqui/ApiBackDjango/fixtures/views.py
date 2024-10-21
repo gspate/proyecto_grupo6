@@ -341,7 +341,7 @@ class BonusHistoryView(APIView):
 
         for fixture_data in fixtures:
             fixture_info = fixture_data.get('fixture')
-            goals_info = fixture_info.get('goals')  # Corregido: goals está dentro de fixture
+            goals_info = fixture_data.get('goals')  # Corregido: goals está dentro de fixture
 
             # Paso 2: Buscar si la fixture existe en la base de datos
             try:
@@ -374,7 +374,7 @@ class BonusHistoryView(APIView):
                 else:
                     continue  # Saltar si los goles son None
             except Exception as e:
-                return JsonResponse({"error": f"Error al determinar el resultado del partido: {str(e)}"}, status=500)
+                return JsonResponse({"error": f"Error al determinar el resultado del partido: {str(e)}, {fixture_info},"}, status=500)
 
             # Incrementar el contador de fixtures procesados
             fixtures_processed += 1
