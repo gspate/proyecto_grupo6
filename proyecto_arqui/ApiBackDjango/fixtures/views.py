@@ -213,20 +213,22 @@ class BonosView(APIView):
                 seller=request_data.get('seller', 0),
                 wallet=request_data.get('wallet')
             )
-
+            token = 0
             # Publicar los datos en MQTT
             data = {
                 "request_id": str(bonus_request.request_id),
-                "fixture": fixture.fixture_id,
-                "quantity": quantity,
                 "group_id": request_data.get('group_id'),
+                "fixture_id": fixture.fixture_id,
                 "league_name": request_data.get('league_name'),
                 "round": request_data.get('round'),
-                "date": datetime.now(),
+                "date": "date",
                 "result": request_data.get('result', '---'),
-                "seller": request_data.get('seller', 0),
+                "depostit_token": f"{token}",
+                "datetime": datetime.now(),
+                "quantity": quantity,
                 "wallet": request_data.get('wallet'),
-                "method": method  # Incluir el método en la publicación MQTT
+                "seller": request_data.get('seller', 0),
+                
             }
 
             # Convertir el diccionario a una cadena JSON
