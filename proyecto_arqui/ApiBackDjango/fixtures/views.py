@@ -139,6 +139,9 @@ class FixtureDetail(APIView):
 
 # bonos
 # Esta vista esta en desarrollo, no esta terminada
+
+class Webpay(APIView):
+    pass
 class BonosView(APIView):
 
     # GET: Obtener la lista de todos los usuarios
@@ -154,7 +157,7 @@ class BonosView(APIView):
         user_id = request_data.get('user_id')  # Asumiendo que se pasa el user_id en la request
         quantity = int(request_data.get('quantity', 0))  # Cantidad de bonos solicitados
         cost_per_bonus = 1000  # Precio por cada bono
-        method = request_data.get('method')
+        method = request_data.get('wallet')
 
         try:
             fixture = Fixture.objects.get(fixture_id=fixture_id_request)
@@ -169,7 +172,7 @@ class BonosView(APIView):
 
         total_cost = cost_per_bonus * quantity
 
-        if method == "wallet":
+        if method:
             # Validar si el usuario tiene suficiente dinero en su billetera
             if user.wallet < total_cost:
                 return Response({"error": "Fondos insuficientes"}, status=status.HTTP_400_BAD_REQUEST)
@@ -178,7 +181,7 @@ class BonosView(APIView):
             user.wallet -= total_cost
             user.save()
 
-        elif method == "direct":
+        else:
             # Aquí se puede agregar cualquier lógica específica para el método directo.
             pass
 
@@ -199,7 +202,7 @@ class BonosView(APIView):
             # Crear la solicitud de bono
             bonus_request = Bonos.objects.create(
                 request_id=request_id,
-                fixture=fixture,
+                fixture_id=fixture,
                 user=user,
                 quantity=quantity,
                 group_id=request_data.get('group_id'),
