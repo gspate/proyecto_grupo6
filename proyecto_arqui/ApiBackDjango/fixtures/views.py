@@ -154,6 +154,7 @@ class BonosView(APIView):
         user_id = request_data.get('user_id')  # Asumiendo que se pasa el user_id en la request
         quantity = int(request_data.get('quantity', 0))  # Cantidad de bonos solicitados
         cost_per_bonus = 1000  # Precio por cada bono
+        method = request_data.get('method')
 
         try:
             fixture = Fixture.objects.get(fixture_id=fixture_id_request)
@@ -165,31 +166,41 @@ class BonosView(APIView):
         except User.DoesNotExist:
             return Response({"error": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND)
 
-        # Calcular el costo total de los bonos
+
         total_cost = cost_per_bonus * quantity
 
-        # Validar si el usuario tiene suficiente dinero en su billetera
-        if user.wallet < total_cost:
-            return Response({"error": "Fondos insuficientes"}, status=status.HTTP_400_BAD_REQUEST)
+        if method == "wallet":
+            # Validar si el usuario tiene suficiente dinero en su billetera
+            if user.wallet < total_cost:
+                return Response({"error": "Fondos insuficientes"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Validar si hay suficientes bonos disponibles
-        if fixture.available_bonuses >= quantity:
-            # Descontar temporalmente el dinero de la billetera del usuario
+            # Descontar el dinero de la billetera del usuario
             user.wallet -= total_cost
             user.save()
 
+        elif method == "direct":
+            # Aquí se puede agregar cualquier lógica específica para el método directo.
+            pass
+
+        # Validar si hay suficientes bonos disponibles
+        if fixture.available_bonuses >= quantity:
             # Descontar temporalmente los bonos disponibles
             fixture.available_bonuses -= quantity
             fixture.save()
 
             # Generar un UUIDv6 para el request_id
-            request_id = uuid6.uuid6()  # Esto mantiene el UUIDv6
+            try:
+
+                request_id = uuid6.uuid6()
+
+            except:
+                return Response ({"error": "uuid6 failed"}, status=status.HTTP_400_BAD_REQUEST)
 
             # Crear la solicitud de bono
             bonus_request = Bonos.objects.create(
-                request_id=request_id,  # Mantener UUIDv6 aquí
+                request_id=request_id,
                 fixture=fixture,
-                user=user,  # Asocia el bono con el usuario
+                user=user,
                 quantity=quantity,
                 group_id=request_data.get('group_id'),
                 league_name=request_data.get('league_name'),
@@ -202,7 +213,7 @@ class BonosView(APIView):
 
             # Publicar los datos en MQTT
             data = {
-                "request_id": str(bonus_request.request_id),  # Convertir UUIDv6 a string
+                "request_id": str(bonus_request.request_id),
                 "fixture": fixture.fixture_id,
                 "quantity": quantity,
                 "group_id": request_data.get('group_id'),
@@ -211,7 +222,8 @@ class BonosView(APIView):
                 "date": datetime.now(),
                 "result": request_data.get('result', '---'),
                 "seller": request_data.get('seller', 0),
-                "wallet": request_data.get('wallet')
+                "wallet": request_data.get('wallet'),
+                "method": method  # Incluir el método en la publicación MQTT
             }
 
             # Convertir el diccionario a una cadena JSON
@@ -226,11 +238,13 @@ class BonosView(APIView):
             )
 
             return Response({
-                "request_id": str(bonus_request.request_id),  # Asegúrate de que el UUIDv6 se devuelva como string
-                "message": "Bonos comprados y dinero descontado exitosamente"
+                "method": method,
+                "request_id": str(bonus_request.request_id),
+                "message": "Bonos comprados exitosamente"
             }, status=status.HTTP_201_CREATED)
         else:
             return Response({"error": "No hay suficientes bonos disponibles"}, status=status.HTTP_400_BAD_REQUEST)
+        
 
 # mqtt/requests
 class BonusRequestView(APIView):
@@ -308,8 +322,6 @@ class BonusValidationView(APIView):
 
         # Procesar la validación
         if valid:
-            bonus_request.status = 'approved'
-            bonus_request.save()
 
             return Response({
                 "message": f"Compra con request_id {request_id} aprobada."
@@ -320,70 +332,101 @@ class BonusValidationView(APIView):
             fixture.available_bonuses += bonus_request.quantity
             fixture.save()
 
-            bonus_request.status = 'rejected'
-            bonus_request.save()
-
             return Response({
                 "message": f"Compra con request_id {request_id} rechazada. Bonos devueltos."
             }, status=status.HTTP_400_BAD_REQUEST)
 
-
 # mqtt/history
-class BonusHistoryView(View):
+class BonusHistoryView(APIView):
 
     def post(self, request, *args, **kwargs):
         # Paso 1: Obtener y decodificar el JSON del request
-        data = json.loads(request.body)
-        fixtures = data.get('fixtures', [])
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError as e:
+            return JsonResponse({"error": f"Invalid JSON: {str(e)}"}, status=400)
 
+        fixtures = data.get('fixtures', [])
         if not fixtures:
             return JsonResponse({"error": "No fixtures found in the request"}, status=400)
 
+        fixtures_not_found = []
+        fixtures_processed = 0  # Contador de fixtures procesados
+
         for fixture_data in fixtures:
             fixture_info = fixture_data.get('fixture')
-            goals_info = fixture_data.get('goals')
+            goals_info = fixture_data.get('goals')  # Corregido: goals está dentro de fixture
 
             # Paso 2: Buscar si la fixture existe en la base de datos
             try:
                 fixture = Fixture.objects.get(fixture_id=fixture_info['id'])
             except Fixture.DoesNotExist:
-                return JsonResponse({"error": "Fixture not found"}, status=404)
+                fixtures_not_found.append(fixture_info['id'])
+                continue
+            except Exception as e:
+                return JsonResponse({"error": f"Error al buscar fixture: {str(e)}"}, status=500)
 
-            # Paso 3: Determinar el ganador
-            home_goals = goals_info.get('home', 0)
-            away_goals = goals_info.get('away', 0)
+            # Determinar el ganador
+            try:
+                home_goals = goals_info.get('home', 0)
+                away_goals = goals_info.get('away', 0)
 
-            if home_goals > away_goals:
-                match_result = 'home'
-                odds_value = fixture.odds_home_value
-            elif away_goals > home_goals:
-                match_result = 'away'
-                odds_value = fixture.odds_away_value
-            else:
-                match_result = 'draw'
-                odds_value = fixture.odds_draw_value
+                # Paso 3: Determinar el ganador
+                if home_goals is not None and away_goals is not None:
+                    if home_goals > away_goals:
+                        match_result = 'home'
+                        odds_value = fixture.odds_home_value
+                    elif away_goals > home_goals:
+                        match_result = 'away'
+                        odds_value = fixture.odds_away_value
+                    else:
+                        match_result = 'draw'
+                        odds_value = fixture.odds_draw_value
 
-            if not odds_value:
-                return JsonResponse({"error": "Odds not found for the result"}, status=400)
+                    if not odds_value:
+                        continue  # Si no hay odds, saltamos esta fixture
+                else:
+                    continue  # Saltar si los goles son None
+            except Exception as e:
+                return JsonResponse({"error": f"Error al determinar el resultado del partido: {str(e)}, {fixture_info},"}, status=500)
+
+            # Incrementar el contador de fixtures procesados
+            fixtures_processed += 1
 
             # Paso 4: Buscar todos los bonos relacionados con la fixture
-            bonos = Bonos.objects.filter(fixture=fixture).select_related('user')
+            try:
+                bonos = Bonos.objects.filter(fixture=fixture).select_related('user')
 
-            for bono in bonos:
-                # Paso 5: Validar si el resultado del bono coincide con el del partido
-                if bono.result == match_result:
-                    # Calcular la cantidad a acreditar en la wallet
-                    amount_to_credit = bono.quantity * 1000 * odds_value
+                for bono in bonos:
+                    # Paso 5: Verificar si el bono ya fue procesado
+                    if bono.status != 'pendiente':
+                        continue
 
-                    # Obtener al usuario asociado al bono
-                    user = bono.user
-                    if user:
-                        # Actualizar la wallet del usuario
-                        user.wallet += amount_to_credit
-                        user.save()
+                    # Validar si el resultado del bono coincide con el del partido
+                    if bono.result == match_result:
+                        amount_to_credit = bono.quantity * 1000 * odds_value
+                        user = bono.user
+                        if user:
+                            user.wallet += amount_to_credit
+                            user.save()
+                            bono.status = 'ganado'
+                            bono.save()
+                        else:
+                            bono.status = 'perdido'
+                            bono.save()
+                    else:
+                        bono.status = 'perdido'
+                        bono.save()
 
-                        # Notificar el crédito realizado
-                        print(f"Usuario {user.username} recibió {amount_to_credit} por el partido {fixture.fixture_id}")
+            except Exception as e:
+                return JsonResponse({"error": f"Error al procesar bonos: {str(e)}"}, status=500)
 
-        # Devolver una respuesta de éxito
-        return JsonResponse({"status": "success", "message": "Bonos procesados correctamente"})
+        # Paso final: devolver una respuesta de éxito
+        total_fixtures = len(fixtures)
+        return JsonResponse({
+            "status": "success",
+            "message": "Bonos procesados correctamente",
+            "fixtures_not_found": fixtures_not_found,
+            "fixtures_processed": fixtures_processed,
+            "total_fixtures": total_fixtures
+        })
