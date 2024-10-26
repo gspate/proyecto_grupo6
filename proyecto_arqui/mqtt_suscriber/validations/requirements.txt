@@ -1,0 +1,10 @@
+fastapi
+sqlalchemy
+uvicorn
+pydantic
+typing
+datetime
+paho-mqtt
+psycopg2-binary
+requests
+retry

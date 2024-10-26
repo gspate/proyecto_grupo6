@@ -1,0 +1,90 @@
+services:
+  postgres:
+    image: postgres:14
+    environment:
+      POSTGRES_USER: gustavog.spate
+      POSTGRES_PASSWORD: panCONqueso123?
+      POSTGRES_DB: football_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gustavog.spate -d football_db -h localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy  # Espera a que la base de datos esté lista
+    volumes:
+      - .:/code
+    ports:
+      - "8000:8000"
+    networks:
+      - app-network
+    environment:
+      - DATABASE_URL=postgresql://gustavog.spate:your_password@postgres:5432/football_db
+      - DB_HOST=postgres
+      - DB_PORT=5432
+
+  mqtt-subscriber-info:
+    depends_on:
+      - api
+    build:
+      context: ../mqtt_suscriber/info 
+      dockerfile: Dockerfile
+    networks:
+      - app-network
+    environment:
+      - MQTT_BROKER_URL=broker.iic2173.org
+      - MQTT_BROKER_PORT=9000
+
+  mqtt-subscriber-requests:
+    depends_on:
+      - api
+    build:
+      context: ../mqtt_suscriber/requests
+      dockerfile: Dockerfile
+    networks:
+      - app-network
+    environment:
+      - MQTT_BROKER_URL=broker.iic2173.org
+      - MQTT_BROKER_PORT=9000
+
+  mqtt-subscriber-validation:
+    depends_on:
+      - api
+      - mqtt-subscriber-requests
+    build:
+      context: ../mqtt_suscriber/validations
+      dockerfile: Dockerfile
+    networks:
+      - app-network
+    environment:
+      - MQTT_BROKER_URL=broker.iic2173.org
+      - MQTT_BROKER_PORT=9000
+
+  mqtt-subscriber-history:
+    depends_on:
+      - api
+    build:
+      context: ../mqtt_suscriber/history
+      dockerfile: Dockerfile
+    networks:
+      - app-network
+    environment:
+      - MQTT_BROKER_URL=broker.iic2173.org
+      - MQTT_BROKER_PORT=9000
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
