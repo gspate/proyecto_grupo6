@@ -40,6 +40,7 @@ class Fixture(models.Model):
     def __str__(self):
         return f"Fixture {self.fixture_id}"
 
+
 class Bonos(models.Model):
     ESTADOS_BONO = [
         ('pendiente', 'Pendiente de Validación'),
@@ -79,3 +80,17 @@ class User(models.Model):
 
     def __str__(self):
         return f"User {self.username} ({self.user_id})"
+    
+    
+class Recommendation(models.Model):
+    user = models.ForeignKey('User', on_delete=models.CASCADE)
+    fixture = models.ForeignKey('Fixture', on_delete=models.CASCADE)
+    recommended_at = models.DateTimeField(default=timezone.now)
+    score = models.FloatField()  # Ponderación de la recomendación según la fórmula
+    processed = models.BooleanField(default=False)  # Para saber si ya fue mostrada
+
+    class Meta:
+        unique_together = ('user', 'fixture')  # Evitar duplicados exactos
+
+    def __str__(self):
+        return f"Recommendation for User {self.user_id} - Fixture {self.fixture_id}"

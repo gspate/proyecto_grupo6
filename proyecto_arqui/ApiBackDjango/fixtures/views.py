@@ -4,17 +4,22 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import permission_classes
 from django.http import JsonResponse, Http404
+from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.utils.timezone import now
 from django.views import View
-from .models import Fixture, Bonos, User
+from django.shortcuts import redirect
+from .models import Fixture, Bonos, User, Recommendation
+from .tasks import generate_recommendations, celery_ping
 from .serializers import FixtureSerializer, BonosSerializer, UserSerializer
 from datetime import datetime
+import requests
 import paho.mqtt.publish as publish
 import json
 import time
 import uuid6
+
 
 # Configuración del broker MQTT
 MQTT_HOST = 'broker.iic2173.org'  # Dirección del broker
@@ -243,6 +248,11 @@ class BonusRequestView(APIView):
         fixture_id_request = request_data.get('fixture_id')
         quantity = int(request_data.get('quantity', 0))  # Cantidad de bonos solicitados
 
+        # Validar que el campo 'wallet' esté presente y sea booleano
+        wallet = request_data.get('wallet')
+        if wallet is None or not isinstance(wallet, bool):
+            return Response({"error": "El campo 'wallet' es obligatorio y debe ser un valor booleano."}, status=status.HTTP_400_BAD_REQUEST)
+
         try:
             fixture = Fixture.objects.get(fixture_id=fixture_id_request)
         except Fixture.DoesNotExist:
@@ -273,7 +283,7 @@ class BonusRequestView(APIView):
                 date=formatted_date,  # Fecha corregida
                 result=request_data.get('result', '---'),
                 seller=request_data.get('seller', 0),
-                wallet=request_data.get('wallet'),
+                wallet=wallet,  # Ya se validó que sea un valor booleano
                 datetime=request_data.get('datetime')  # Usar el datetime que ya viene en el payload
             )
 
@@ -416,3 +426,33 @@ class BonusHistoryView(APIView):
             "fixtures_processed": fixtures_processed,
             "total_fixtures": total_fixtures
         })
+
+
+def request_recommendation(request, user_id):
+    # Envía una solicitud a worker_api para crear la tarea
+    data = {"user_id": user_id}
+    response = requests.post(f"{settings.WORKER_API_URL}/job", json=data)
+
+    if response.status_code == 201:
+        job_id = response.json().get("job_id")
+        # Devuelve el job_id al cliente para que pueda consultar el estado más tarde
+        return JsonResponse({"job_id": job_id, "message": "Recommendation task created successfully"}, status=201)
+    else:
+        return JsonResponse({"error": "Failed to create recommendation task"}, status=500)
+
+
+def user_recommendations(request, user_id):
+    recommendations = Recommendation.objects.filter(user_id=user_id).order_by('-recommended_at')
+    recommendations_list = [
+        {
+            'fixture_id': recommendation.fixture.fixture_id,
+            'fixture_date': recommendation.fixture.date,
+            'home_team': recommendation.fixture.home_team_name,
+            'away_team': recommendation.fixture.away_team_name,
+            'score': recommendation.score,
+            'recommended_at': recommendation.recommended_at
+        }
+        for recommendation in recommendations
+    ]
+    
+    return JsonResponse({'recommendations': recommendations_list})

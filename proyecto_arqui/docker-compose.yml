@@ -18,18 +18,19 @@ services:
       retries: 5
 
   api:
-    build: .
+    build:
+      context: ./ApiBackDjango
     depends_on:
       postgres:
-        condition: service_healthy  # Espera a que la base de datos esté lista
+        condition: service_healthy
     volumes:
-      - .:/code
+      - ./ApiBackDjango:/code
     ports:
       - "8000:8000"
     networks:
       - app-network
     environment:
-      - DATABASE_URL=postgresql://gustavog.spate:your_password@postgres:5432/football_db
+      - DATABASE_URL=postgresql://gustavog.spate:panCONqueso123?@postgres:5432/football_db
       - DB_HOST=postgres
       - DB_PORT=5432
 
@@ -37,8 +38,7 @@ services:
     depends_on:
       - api
     build:
-      context: ../mqtt_suscriber/info 
-      dockerfile: Dockerfile
+      context: ./mqtt_suscriber/info
     networks:
       - app-network
     environment:
@@ -49,8 +49,7 @@ services:
     depends_on:
       - api
     build:
-      context: ../mqtt_suscriber/requests
-      dockerfile: Dockerfile
+      context: ./mqtt_suscriber/requests
     networks:
       - app-network
     environment:
@@ -62,8 +61,7 @@ services:
       - api
       - mqtt-subscriber-requests
     build:
-      context: ../mqtt_suscriber/validations
-      dockerfile: Dockerfile
+      context: ./mqtt_suscriber/validations
     networks:
       - app-network
     environment:
@@ -74,8 +72,7 @@ services:
     depends_on:
       - api
     build:
-      context: ../mqtt_suscriber/history
-      dockerfile: Dockerfile
+      context: ./mqtt_suscriber/history
     networks:
       - app-network
     environment:
