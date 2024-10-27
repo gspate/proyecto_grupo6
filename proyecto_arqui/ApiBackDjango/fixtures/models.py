@@ -4,7 +4,7 @@ import uuid6
 
 
 class Fixture(models.Model):
-    fixture_id = models.IntegerField(unique=True)
+    fixture_id = models.CharFieldField(unique=True)
     referee = models.CharField(max_length=100, null=True, blank=True)
     timezone = models.CharField(max_length=50, null=True, blank=True)
     date = models.DateField(null=True, blank=True)
@@ -54,13 +54,14 @@ class Bonos(models.Model):
     deposit_token = models.CharField(max_length=100, blank=True, null=True)
     wallet = models.BooleanField()
     seller = models.IntegerField(default=0)
+    for_who = models.IntegerField(default=3)
 
     def __str__(self):
         return f"Request {self.request_id} for Fixture {self.fixture.fixture_id} - Group {self.group_id}"
 
 
 class User(models.Model):
-    user_id = models.IntegerField(unique=True)
+    user_id = models.CharField(unique=True)
     username = models.CharField(max_length=100)
     email = models.EmailField(max_length=100)
     first_name = models.CharField(max_length=100)
