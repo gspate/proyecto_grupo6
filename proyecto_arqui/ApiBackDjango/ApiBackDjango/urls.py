@@ -17,8 +17,8 @@ Including another URLconf
 from django.urls import path
 from fixtures.views import (
     FixtureList, FixtureDetail, BonusRequestView, BonusValidationView, 
-    BonosView, BonusHistoryView, UserView, UserDetailView, 
-    StoreRecommendationView, UserPurchasesView, UserRecommendationsView
+    BonosView, BonusHistoryView, UserView, UserDetailView,
+    StoreRecommendationView, UserPurchasesView, UserRecommendationsView, addwallet
 )
 
 urlpatterns = [
@@ -37,6 +37,9 @@ urlpatterns = [
 
     # Bonos
     path('bonos', BonosView.as_view(), name='bonos_list'),
+    
+    # Bonos
+    path('wallet/add', addwallet.as_view(), name='hola'),
 
     # Recomendaciones
     path("store_recommendation", StoreRecommendationView.as_view(), name="store_recommendation"),
