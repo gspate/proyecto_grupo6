@@ -15,11 +15,11 @@ import paho.mqtt.publish as publish
 import json
 import time
 import uuid6
-from transbank.webpay.webpay_plus.transaction import Transaction
-from transbank.common.options import WebpayOptions
-from transbank.common.integration_type import IntegrationType
-from transbank.webpay.webpay_plus.integration_commerce_codes import IntegrationCommerceCodes
-from transbank.webpay.webpay_plus.integration_api_keys import IntegrationApiKeys
+#from transbank.webpay.webpay_plus.transaction import Transaction
+#from transbank.common.options import WebpayOptions
+#from transbank.common.integration_type import IntegrationType
+#from transbank.webpay.webpay_plus.integration_commerce_codes import IntegrationCommerceCodes
+#from transbank.webpay.webpay_plus.integration_api_keys import IntegrationApiKeys
 
 
 # Configuración del broker MQTT
@@ -256,10 +256,10 @@ class BonosView(APIView):
                 round=fixture.league_round,
                 datetime=datetime.now(),# arreglar despues
                 date=fixture.date,
-                result=request_data.get(result),
+                result=result,
                 seller=0,
-                wallet=request_data.get('wallet'),
-                quantity=quantity
+                wallet=method,
+                
 
             )
             token = 0### deposit token
@@ -271,11 +271,11 @@ class BonosView(APIView):
                 "league_name": fixture.league_name,
                 "round": fixture.league_round,
                 "date": fixture.date,
-                "result": request_data.get(result),
+                "result": result,
                 "depostit_token": f"{token}",
                 "datetime": datetime.now(),
                 "quantity": quantity,
-                "wallet": request_data.get('wallet'),
+                "wallet": method,
                 "seller": 0,
                 
             }
