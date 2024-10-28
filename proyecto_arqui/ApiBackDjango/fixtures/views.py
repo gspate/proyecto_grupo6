@@ -27,6 +27,10 @@ MQTT_PORT = 9000                  # Puerto del broker
 MQTT_USER = 'students'            # Usuario
 MQTT_PASSWORD = 'iic2173-2024-2-students'  # Contraseña
 
+#tx = Transaction(WebpayOptions(IntegrationCommerceCodes.WEBPAY_PLUS, IntegrationApiKeys.WEBPAY, IntegrationType.TEST))
+
+
+
 # /users
 class UserView(APIView):
     """
@@ -46,6 +50,7 @@ class UserView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
 
 # /users/<user_id>
 class UserDetailView(APIView):
@@ -79,6 +84,37 @@ class UserDetailView(APIView):
         user = self.get_object(user_id)
         user.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class addwallet(APIView):
+
+    def patch(self,request, **kwargs):
+        request_data = request.data
+        user_id = request_data.get('user')
+        money_to_add = request_data.get('quantity')
+       # Validar que se proporcionen user_id y cantidad
+        if not user_id or not money_to_add:
+            return Response({"error": "user y quantity son campos requeridos"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Obtener el usuario y su wallet
+            user = User.objects.get(user_id=user_id)
+        except User.DoesNotExist:
+            return Response({"error": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            # Sumar el dinero a la wallet del usuario
+            user.wallet += float(money_to_add)  # Convertir a float si la cantidad es decimal
+            user.save()
+
+            return Response({
+                "message": "Cantidad agregada a la wallet exitosamente",
+                "user_id": user_id,
+                "new_balance": user.wallet
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({"error": "Error al actualizar la wallet"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # /fixtures
 class FixtureList(APIView):
@@ -118,6 +154,8 @@ class FixtureList(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # /fixtures/<fixture_id>
+
+
 class FixtureDetail(APIView):
     """
     Vista para obtener (GET) o actualizar (PUT) un fixture específico.
@@ -144,6 +182,9 @@ class FixtureDetail(APIView):
 
 # bonos
 # Esta vista esta en desarrollo, no esta terminada
+
+class AskTransbank(APIView):
+    pass
 class BonosView(APIView):
 
     # GET: Obtener la lista de todos los usuarios
@@ -161,7 +202,6 @@ class BonosView(APIView):
         cost_per_bonus = 1000  # Precio por cada bono
         method = request_data.get('wallet')
         result = request_data.get('result')
-
 
         try:
             fixture = Fixture.objects.get(fixture_id=fixture_id_request)
@@ -270,9 +310,9 @@ class BonosView(APIView):
                         "request_id": str(bonus_request.request_id),
                         "message": "Bonos comprados y dinero descontado exitosamente, pero recomendacion no generada"
                     }, status=status.HTTP_201_CREATED)
-
         else:
             return Response({"error": "No hay suficientes bonos disponibles"}, status=status.HTTP_400_BAD_REQUEST)
+        
 
 # mqtt/requests
 class BonusRequestView(APIView):
@@ -486,3 +526,4 @@ class StoreRecommendationView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
