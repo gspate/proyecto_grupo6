@@ -51,6 +51,7 @@ class UserView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
 
 # /users/<user_id>
 class UserDetailView(APIView):
@@ -84,6 +85,37 @@ class UserDetailView(APIView):
         user = self.get_object(user_id)
         user.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class addwallet(APIView):
+
+    def patch(self,request, **kwargs):
+        request_data = request.data
+        user_id = request_data.get('user')
+        money_to_add = request_data.get('quantity')
+       # Validar que se proporcionen user_id y cantidad
+        if not user_id or not money_to_add:
+            return Response({"error": "user y quantity son campos requeridos"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Obtener el usuario y su wallet
+            user = User.objects.get(user_id=user_id)
+        except User.DoesNotExist:
+            return Response({"error": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            # Sumar el dinero a la wallet del usuario
+            user.wallet += float(money_to_add)  # Convertir a float si la cantidad es decimal
+            user.save()
+
+            return Response({
+                "message": "Cantidad agregada a la wallet exitosamente",
+                "user_id": user_id,
+                "new_balance": user.wallet
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({"error": "Error al actualizar la wallet"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # /fixtures
 class FixtureList(APIView):
@@ -123,6 +155,8 @@ class FixtureList(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # /fixtures/<fixture_id>
+
+
 class FixtureDetail(APIView):
     """
     Vista para obtener (GET) o actualizar (PUT) un fixture específico.
@@ -169,6 +203,7 @@ class BonosView(APIView):
         cost_per_bonus = 1000  # Precio por cada bono
         method = request_data.get('wallet')
         for_who = request_data.get('for')
+        
 
         try:
             fixture = Fixture.objects.get(fixture_id=fixture_id_request)
@@ -220,10 +255,10 @@ class BonosView(APIView):
                 league_name=request_data.get('league_name'),
                 round=request_data.get('round'),
                 date=datetime.now(),
-                result=request_data.get('result', '---'),
+                result=request_data.get(for_who),
                 seller=request_data.get('seller', 0),
                 wallet=request_data.get('wallet'),
-                for_who=request_data.get("for_who"),
+                
 
             )
             token = 0### deposit token
@@ -235,7 +270,7 @@ class BonosView(APIView):
                 "league_name": request_data.get('league_name'),
                 "round": request_data.get('round'),
                 "date": request_data.get('date'),
-                "result": request_data.get('result', '---'),
+                "result": request_data.get(for_who),
                 "depostit_token": f"{token}",
                 "datetime": datetime.now(),
                 "quantity": quantity,
