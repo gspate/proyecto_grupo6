@@ -15,12 +15,22 @@ import paho.mqtt.publish as publish
 import json
 import time
 import uuid6
+from transbank.webpay.webpay_plus.transaction import Transaction
+from transbank.common.options import WebpayOptions
+from transbank.common.integration_type import IntegrationType
+from transbank.webpay.webpay_plus.integration_commerce_codes import IntegrationCommerceCodes
+from transbank.webpay.webpay_plus.integration_api_keys import IntegrationApiKeys
+
 
 # Configuración del broker MQTT
 MQTT_HOST = 'broker.iic2173.org'  # Dirección del broker
 MQTT_PORT = 9000                  # Puerto del broker
 MQTT_USER = 'students'            # Usuario
 MQTT_PASSWORD = 'iic2173-2024-2-students'  # Contraseña
+
+tx = Transaction(WebpayOptions(IntegrationCommerceCodes.WEBPAY_PLUS, IntegrationApiKeys.WEBPAY, IntegrationType.TEST))
+
+
 
 # /users
 class UserView(APIView):
@@ -141,9 +151,6 @@ class FixtureDetail(APIView):
 # Esta vista esta en desarrollo, no esta terminada
 
 class AskTransbank(APIView):
-
-    post
-
     pass
 class BonosView(APIView):
 
@@ -186,7 +193,7 @@ class BonosView(APIView):
             user.save()
 
         else:
-            # Aquí se puede agregar cualquier lógica específica para el método directo.
+            #### webpay
             pass
         
         # Validar si hay suficientes bonos disponibles
@@ -219,7 +226,7 @@ class BonosView(APIView):
                 for_who=request_data.get("for_who"),
 
             )
-            token = 0
+            token = 0### deposit token
             # Publicar los datos en MQTT
             data = {
                 "request_id": str(bonus_request.request_id),
