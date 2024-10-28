@@ -33,12 +33,12 @@ urlpatterns = [
 
     # Usuarios
     path('users', UserView.as_view(), name='user_list'),
-    path('users/<int:user_id>', UserDetailView.as_view(), name='user_detail'),
+    path('users/<str:user_id>', UserDetailView.as_view(), name='user_detail'),
 
     # Bonos
     path('bonos', BonosView.as_view(), name='bonos_list'),
 
     # Recomendaciones
     path("store_recommendation", StoreRecommendationView.as_view(), name="store_recommendation"),
-    path("user_purchases/<int:user_id>", UserPurchasesView.as_view(), name="user_purchases"),
+    path("user_purchases/<str:user_id>", UserPurchasesView.as_view(), name="user_purchases"),
 ]

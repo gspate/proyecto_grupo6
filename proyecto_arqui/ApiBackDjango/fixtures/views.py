@@ -288,7 +288,7 @@ class BonosView(APIView):
 
             # Enviar información al job_master para calcular recomendaciones
             try:
-                job_master_url = "http://job_master:8000/api/calculate_recommendations/"
+                job_master_url = "http://producer:5000/api/calculate_recommendations/"
                 data = {
                     "user_id": user.user_id,
                     "fixture_id": fixture.fixture_id,
@@ -514,7 +514,7 @@ class BonusHistoryView(APIView):
 class UserPurchasesView(APIView):
     def get(self, request, user_id, *args, **kwargs):
         # Filtrar las compras por usuario
-        bonos = Bonos.objects.filter(user__user_id=user_id)
+        bonos = Bonos.objects.filter(user_id=user_id)
         serializer = BonosSerializer(bonos, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
