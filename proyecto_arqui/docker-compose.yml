@@ -18,27 +18,68 @@ services:
       retries: 5
 
   api:
-    build: .
+    build:
+      context: ./ApiBackDjango
     depends_on:
       postgres:
-        condition: service_healthy  # Espera a que la base de datos esté lista
+        condition: service_healthy
     volumes:
-      - .:/code
+      - ./ApiBackDjango:/code
     ports:
       - "8000:8000"
     networks:
       - app-network
     environment:
-      - DATABASE_URL=postgresql://gustavog.spate:your_password@postgres:5432/football_db
+      - DATABASE_URL=postgresql://gustavog.spate:panCONqueso123?@postgres:5432/football_db
       - DB_HOST=postgres
       - DB_PORT=5432
+
+  producer:
+    build:
+      context: ./workers
+      dockerfile: Dockerfile
+    command: uvicorn producer:app --reload --host 0.0.0.0 --port 5000
+    volumes:
+      - ./workers:/opt/
+    expose:
+      - 5000
+    ports:
+      - '5000:5000' 
+    environment:
+      CELERY_BROKER_URL: redis://redis-broker:6379/0
+    depends_on:
+      - redis-broker
+    networks:
+      - app-network
+
+  consumer:
+    build:
+      context: ./workers
+      dockerfile: Dockerfile
+    deploy:
+      replicas: 2
+    command: celery -A consumer.celery_app worker --loglevel=INFO --purge --concurrency=1
+    volumes:
+      - ./workers:/opt/
+    depends_on:
+      - producer
+    environment:
+      CELERY_BROKER_URL: redis://redis-broker:6379/0
+    networks:
+      - app-network
+
+  redis-broker:
+    image: redis:7
+    volumes:
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+    networks:
+      - app-network
 
   mqtt-subscriber-info:
     depends_on:
       - api
     build:
-      context: ../mqtt_suscriber/info 
-      dockerfile: Dockerfile
+      context: ./mqtt_suscriber/info
     networks:
       - app-network
     environment:
@@ -49,8 +90,7 @@ services:
     depends_on:
       - api
     build:
-      context: ../mqtt_suscriber/requests
-      dockerfile: Dockerfile
+      context: ./mqtt_suscriber/requests
     networks:
       - app-network
     environment:
@@ -62,8 +102,7 @@ services:
       - api
       - mqtt-subscriber-requests
     build:
-      context: ../mqtt_suscriber/validations
-      dockerfile: Dockerfile
+      context: ./mqtt_suscriber/validations
     networks:
       - app-network
     environment:
@@ -74,8 +113,7 @@ services:
     depends_on:
       - api
     build:
-      context: ../mqtt_suscriber/history
-      dockerfile: Dockerfile
+      context: ./mqtt_suscriber/history
     networks:
       - app-network
     environment:

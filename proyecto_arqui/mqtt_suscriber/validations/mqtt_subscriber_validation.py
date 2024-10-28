@@ -16,7 +16,7 @@ def on_connect_validation(client, userdata, flags, rc):
     except Exception as e:
         print(f"Error en on_connect_validation: {e}")
 
-@retry(tries=10, delay=5, backoff=2)
+@retry(tries=5, delay=5, backoff=1)
 def send_validation_request(api_url_with_id, data):
     try:
         # Enviar la validación de la solicitud a la API

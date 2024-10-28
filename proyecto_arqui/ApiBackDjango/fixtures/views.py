@@ -4,22 +4,21 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import permission_classes
 from django.http import JsonResponse, Http404
+from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.utils.timezone import now
 from django.views import View
-from .models import Fixture, Bonos, User
-from .serializers import FixtureSerializer, BonosSerializer, UserSerializer
+from .models import Fixture, Bonos, User, Recommendation
+from .serializers import FixtureSerializer, BonosSerializer, UserSerializer, RecommendationSerializer
+from django.utils import timezone
+import json
 from datetime import datetime
+import requests
 import paho.mqtt.publish as publish
 import json
-import time
 import uuid6
-#from transbank.webpay.webpay_plus.transaction import Transaction
-#from transbank.common.options import WebpayOptions
-#from transbank.common.integration_type import IntegrationType
-#from transbank.webpay.webpay_plus.integration_commerce_codes import IntegrationCommerceCodes
-#from transbank.webpay.webpay_plus.integration_api_keys import IntegrationApiKeys
+import requests
 
 
 # Configuración del broker MQTT
@@ -203,7 +202,6 @@ class BonosView(APIView):
         cost_per_bonus = 1000  # Precio por cada bono
         method = request_data.get('wallet')
         result = request_data.get('result')
-        
 
         try:
             fixture = Fixture.objects.get(fixture_id=fixture_id_request)
@@ -239,30 +237,28 @@ class BonosView(APIView):
 
             # Generar un UUIDv6 para el request_id
             try:
-
                 request_id = uuid6.uuid6()
-
             except:
-                return Response ({"error": "uuid6 failed"}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"error": "uuid6 failed"}, status=status.HTTP_400_BAD_REQUEST)
 
             # Crear la solicitud de bono
             bonus_request = Bonos.objects.create(
                 request_id=request_id,
-                fixture_id=fixture.fixture_id,
-                user=user,
+                fixture_id=fixture_id_request,
+                user_id=user_id,
                 quantity=quantity,
                 group_id="6",
                 league_name=fixture.league_name,
                 round=fixture.league_round,
-                datetime=datetime.now(),# arreglar despues
+                datetime=timezone.now(),# arreglar despues
                 date=fixture.date,
-                result=result,
+                result=request_data.get('result'),
                 seller=0,
-                wallet=method,
-                
-
+                wallet=request_data.get('wallet')
             )
-            token = 0### deposit token
+
+            token = 0 # deposit token
+
             # Publicar los datos en MQTT
             data = {
                 "request_id": str(bonus_request.request_id),
@@ -271,17 +267,16 @@ class BonosView(APIView):
                 "league_name": fixture.league_name,
                 "round": fixture.league_round,
                 "date": fixture.date,
-                "result": result,
+                "result": request_data.get('result'),
                 "depostit_token": f"{token}",
-                "datetime": datetime.now(),
+                "datetime": timezone.now(),
                 "quantity": quantity,
-                "wallet": method,
-                "seller": 0,
-                
+                "wallet": request_data.get('wallet'),
+                "seller": 0
             }
 
             # Convertir el diccionario a una cadena JSON
-            json_data = json.dumps(data)
+            json_data = json.dumps(data, default=str)
 
             publish.single(
                 topic='fixtures/request',
@@ -291,11 +286,30 @@ class BonosView(APIView):
                 auth={'username': MQTT_USER, 'password': MQTT_PASSWORD}
             )
 
-            return Response({
-                "method": method,
-                "request_id": str(bonus_request.request_id),
-                "message": "Bonos comprados exitosamente"
-            }, status=status.HTTP_201_CREATED)
+            # Enviar información al job_master para calcular recomendaciones
+            try:
+                job_master_url = "http://job_master:8000/api/calculate_recommendations/"
+                data = {
+                    "user_id": user.user_id,
+                    "fixture_id": fixture.fixture_id,
+                }
+                response = requests.post(job_master_url, json=data)
+
+                if response.status_code == 200:
+                    return Response({
+                        "request_id": str(bonus_request.request_id),
+                        "message": "Bonos comprados exitosamente, dinero descontado exitosamente y recomendaciones generadas"
+                    }, status=status.HTTP_201_CREATED)
+                else:
+                    return Response({
+                        "request_id": str(bonus_request.request_id),
+                        "message": "Bonos comprados y dinero descontado exitosamente, pero recomendacion no generada"
+                    }, status=status.HTTP_201_CREATED)
+            except Exception as e:
+                 return Response({
+                        "request_id": str(bonus_request.request_id),
+                        "message": "Bonos comprados y dinero descontado exitosamente, pero recomendacion no generada"
+                    }, status=status.HTTP_201_CREATED)
         else:
             return Response({"error": "No hay suficientes bonos disponibles"}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -310,6 +324,11 @@ class BonusRequestView(APIView):
         request_data = request.data
         fixture_id_request = request_data.get('fixture_id')
         quantity = int(request_data.get('quantity', 0))  # Cantidad de bonos solicitados
+
+        # Validar que el campo 'wallet' esté presente y sea booleano
+        wallet = request_data.get('wallet')
+        if wallet is None or not isinstance(wallet, bool):
+            return Response({"error": "El campo 'wallet' es obligatorio y debe ser un valor booleano."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             fixture = Fixture.objects.get(fixture_id=fixture_id_request)
@@ -333,7 +352,7 @@ class BonusRequestView(APIView):
             # Crear una nueva solicitud de bono (BonusRequest)
             bonus_request = Bonos.objects.create(
                 request_id=request_data.get('request_id'),
-                fixture=fixture,
+                fixture_id=fixture_id_request,
                 quantity=quantity,
                 group_id=request_data.get('group_id'),
                 league_name=request_data.get('league_name'),
@@ -341,7 +360,7 @@ class BonusRequestView(APIView):
                 date=formatted_date,  # Fecha corregida
                 result=request_data.get('result', '---'),
                 seller=request_data.get('seller', 0),
-                wallet=request_data.get('wallet'),
+                wallet=wallet,  # Ya se validó que sea un valor booleano
                 datetime=request_data.get('datetime')  # Usar el datetime que ya viene en el payload
             )
 
@@ -382,7 +401,7 @@ class BonusValidationView(APIView):
             }, status=status.HTTP_200_OK)
         else:
             # Si no es válida, devolver los bonos al fixture
-            fixture = bonus_request.fixture
+            fixture = Fixture.objects.get(fixture_id=bonus_request.fixture_id)
             fixture.available_bonuses += bonus_request.quantity
             fixture.save()
 
@@ -449,7 +468,7 @@ class BonusHistoryView(APIView):
 
             # Paso 4: Buscar todos los bonos relacionados con la fixture
             try:
-                bonos = Bonos.objects.filter(fixture=fixture).select_related('user')
+                bonos = Bonos.objects.filter(fixture_id=fixture.fixture_id)
 
                 for bono in bonos:
                     # Paso 5: Verificar si el bono ya fue procesado
@@ -459,15 +478,21 @@ class BonusHistoryView(APIView):
                     # Validar si el resultado del bono coincide con el del partido
                     if bono.result == match_result:
                         amount_to_credit = bono.quantity * 1000 * odds_value
-                        user = bono.user
-                        if user:
-                            user.wallet += amount_to_credit
-                            user.save()
-                            bono.status = 'ganado'
-                            bono.save()
-                        else:
-                            bono.status = 'perdido'
-                            bono.save()
+
+                        try:
+                            user = User.objects.get(user_id=bono.user_id)
+
+                            if user:
+                                user.wallet += amount_to_credit
+                                user.save()
+                                bono.status = 'ganado'
+                                bono.save()
+                            else:
+                                bono.status = 'perdido'
+                                bono.save()
+                        except Exception as e:
+                            continue
+
                     else:
                         bono.status = 'perdido'
                         bono.save()
@@ -484,3 +509,21 @@ class BonusHistoryView(APIView):
             "fixtures_processed": fixtures_processed,
             "total_fixtures": total_fixtures
         })
+
+
+class UserPurchasesView(APIView):
+    def get(self, request, user_id, *args, **kwargs):
+        # Filtrar las compras por usuario
+        bonos = Bonos.objects.filter(user__user_id=user_id)
+        serializer = BonosSerializer(bonos, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class StoreRecommendationView(APIView):
+    def post(self, request, *args, **kwargs):
+        serializer = RecommendationSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
