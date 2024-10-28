@@ -1,0 +1,128 @@
+services:
+  postgres:
+    image: postgres:14
+    environment:
+      POSTGRES_USER: gustavog.spate
+      POSTGRES_PASSWORD: panCONqueso123?
+      POSTGRES_DB: football_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gustavog.spate -d football_db -h localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ./ApiBackDjango
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./ApiBackDjango:/code
+    ports:
+      - "8000:8000"
+    networks:
+      - app-network
+    environment:
+      - DATABASE_URL=postgresql://gustavog.spate:panCONqueso123?@postgres:5432/football_db
+      - DB_HOST=postgres
+      - DB_PORT=5432
+
+  producer:
+    build:
+      context: ./workers
+      dockerfile: Dockerfile
+    command: uvicorn producer:app --reload --host 0.0.0.0 --port 5000
+    volumes:
+      - ./workers:/opt/
+    expose:
+      - 5000
+    ports:
+      - '5000:5000' 
+    environment:
+      CELERY_BROKER_URL: redis://redis-broker:6379/0
+    depends_on:
+      - redis-broker
+    networks:
+      - app-network
+
+  consumer:
+    build:
+      context: ./workers
+      dockerfile: Dockerfile
+    deploy:
+      replicas: 2
+    command: celery -A consumer.celery_app worker --loglevel=INFO --purge --concurrency=1
+    volumes:
+      - ./workers:/opt/
+    depends_on:
+      - producer
+    environment:
+      CELERY_BROKER_URL: redis://redis-broker:6379/0
+    networks:
+      - app-network
+
+  redis-broker:
+    image: redis:7
+    volumes:
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+    networks:
+      - app-network
+
+  mqtt-subscriber-info:
+    depends_on:
+      - api
+    build:
+      context: ./mqtt_suscriber/info
+    networks:
+      - app-network
+    environment:
+      - MQTT_BROKER_URL=broker.iic2173.org
+      - MQTT_BROKER_PORT=9000
+
+  mqtt-subscriber-requests:
+    depends_on:
+      - api
+    build:
+      context: ./mqtt_suscriber/requests
+    networks:
+      - app-network
+    environment:
+      - MQTT_BROKER_URL=broker.iic2173.org
+      - MQTT_BROKER_PORT=9000
+
+  mqtt-subscriber-validation:
+    depends_on:
+      - api
+      - mqtt-subscriber-requests
+    build:
+      context: ./mqtt_suscriber/validations
+    networks:
+      - app-network
+    environment:
+      - MQTT_BROKER_URL=broker.iic2173.org
+      - MQTT_BROKER_PORT=9000
+
+  mqtt-subscriber-history:
+    depends_on:
+      - api
+    build:
+      context: ./mqtt_suscriber/history
+    networks:
+      - app-network
+    environment:
+      - MQTT_BROKER_URL=broker.iic2173.org
+      - MQTT_BROKER_PORT=9000
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

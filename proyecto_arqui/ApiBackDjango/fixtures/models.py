@@ -4,7 +4,7 @@ import uuid6
 
 
 class Fixture(models.Model):
-    fixture_id = models.IntegerField(unique=True)
+    fixture_id = models.CharField(unique=True, null=False, blank=False)
     referee = models.CharField(max_length=100, null=True, blank=True)
     timezone = models.CharField(max_length=50, null=True, blank=True)
     date = models.DateField(null=True, blank=True)
@@ -40,6 +40,7 @@ class Fixture(models.Model):
     def __str__(self):
         return f"Fixture {self.fixture_id}"
 
+
 class Bonos(models.Model):
     ESTADOS_BONO = [
         ('pendiente', 'Pendiente de Validación'),
@@ -49,8 +50,8 @@ class Bonos(models.Model):
     ]
 
     request_id = models.UUIDField(unique=True, default=uuid6.uuid6, editable=False)
-    fixture = models.ForeignKey('Fixture', on_delete=models.CASCADE)
-    user = models.ForeignKey('User', on_delete=models.SET_NULL, null=True, blank=True)  # Asociación con User
+    fixture_id = models.CharField(null=False, blank=False)
+    user_id = models.CharField(null=True, blank=True)
     quantity = models.IntegerField()
     datetime = models.DateTimeField(default=timezone.now)
     group_id = models.CharField(max_length=10, null=True, blank=True)
@@ -60,15 +61,16 @@ class Bonos(models.Model):
     result = models.CharField(max_length=50, default='---')
     deposit_token = models.CharField(max_length=100, blank=True, null=True)
     wallet = models.BooleanField()
+    acierto = models.BooleanField(default=False)
     seller = models.IntegerField(default=0)
     status = models.CharField(max_length=10, choices=ESTADOS_BONO, default='pendiente')
 
     def __str__(self):
-        return f"Request {self.request_id} for Fixture {self.fixture.fixture_id} - Group {self.group_id}"
+        return f"Request {self.request_id} for Fixture {self.fixture_id} - Group {self.group_id}"
 
 
 class User(models.Model):
-    user_id = models.IntegerField(unique=True)
+    user_id = models.CharField(unique=True)
     username = models.CharField(max_length=100)
     email = models.EmailField(max_length=100)
     first_name = models.CharField(max_length=100)
@@ -79,3 +81,12 @@ class User(models.Model):
 
     def __str__(self):
         return f"User {self.username} ({self.user_id})"
+
+
+class Recommendation(models.Model):
+    user_id = models.CharField(null=False, blank=False)
+    fixture_id = models.CharField(null=False, blank=False)
+    league_name = models.CharField(max_length=100, null=True, blank=True)
+    round = models.CharField(max_length=100, null=True, blank=True)
+    benefit_score = models.FloatField()  # Ponderador calculado para la recomendación
+    created_at = models.DateTimeField(auto_now_add=True)

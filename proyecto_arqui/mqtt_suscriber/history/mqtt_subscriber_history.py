@@ -25,7 +25,7 @@ def on_message_history(client, userdata, msg):
             if isinstance(data, str):
                 # print("El payload está doblemente codificado. Intentando decodificar nuevamente.")
                 data = json.loads(data)  # Decodificar el string nuevamente
-            print(f"Payload decodificado correctamente: {data}")
+            # print(f"Payload decodificado correctamente: {data}")
             # print(f"Tipo de data decodificada: {type(data)}")  # Imprimir el tipo de data
         except json.JSONDecodeError as e:
             print(f"Error al decodificar el JSON: {e}")
