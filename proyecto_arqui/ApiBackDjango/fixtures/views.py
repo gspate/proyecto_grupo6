@@ -288,7 +288,7 @@ class BonosView(APIView):
 
             # Enviar información al job_master para calcular recomendaciones
             try:
-                job_master_url = "http://producer:5000/api/calculate_recommendations/"
+                job_master_url = "http://producer:5000/job"
                 data = {
                     "user_id": user.user_id,
                     "fixture_id": fixture.fixture_id,
@@ -409,6 +409,7 @@ class BonusValidationView(APIView):
                 "message": f"Compra con request_id {request_id} rechazada. Bonos devueltos."
             }, status=status.HTTP_400_BAD_REQUEST)
 
+
 # mqtt/history
 class BonusHistoryView(APIView):
 
@@ -487,6 +488,8 @@ class BonusHistoryView(APIView):
                                 user.save()
                                 bono.status = 'ganado'
                                 bono.save()
+                                bono.acierto = True
+                                bono.save()
                             else:
                                 bono.status = 'perdido'
                                 bono.save()
@@ -527,3 +530,16 @@ class StoreRecommendationView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
+class UserRecommendationsView(APIView):
+    def get(self, request, user_id, *args, **kwargs):
+        # Filtra las recomendaciones por el user_id especificado
+        recommendations = Recommendation.objects.filter(user_id=user_id).order_by('-created_at')
+
+        # Si no se encuentran recomendaciones, devuelve un mensaje informativo
+        if not recommendations.exists():
+            return Response({"message": "No hay recomendaciones para este usuario."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Serializa las recomendaciones encontradas
+        serializer = RecommendationSerializer(recommendations, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)

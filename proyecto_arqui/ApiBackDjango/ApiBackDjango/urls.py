@@ -18,7 +18,7 @@ from django.urls import path
 from fixtures.views import (
     FixtureList, FixtureDetail, BonusRequestView, BonusValidationView, 
     BonosView, BonusHistoryView, UserView, UserDetailView, 
-    StoreRecommendationView, UserPurchasesView
+    StoreRecommendationView, UserPurchasesView, UserRecommendationsView
 )
 
 urlpatterns = [
@@ -41,4 +41,5 @@ urlpatterns = [
     # Recomendaciones
     path("store_recommendation", StoreRecommendationView.as_view(), name="store_recommendation"),
     path("user_purchases/<str:user_id>", UserPurchasesView.as_view(), name="user_purchases"),
+    path("user_recommendations/<str:user_id>", UserRecommendationsView.as_view(), name="user_recommendations")
 ]
