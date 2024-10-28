@@ -4,7 +4,7 @@ import uuid6
 
 
 class Fixture(models.Model):
-    fixture_id = models.IntegerField(unique=True)
+    fixture_id = models.CharField(unique=True, null=False, blank=False)
     referee = models.CharField(max_length=100, null=True, blank=True)
     timezone = models.CharField(max_length=50, null=True, blank=True)
     date = models.DateField(null=True, blank=True)
@@ -50,8 +50,8 @@ class Bonos(models.Model):
     ]
 
     request_id = models.UUIDField(unique=True, default=uuid6.uuid6, editable=False)
-    fixture = models.ForeignKey('Fixture', on_delete=models.CASCADE)
-    user = models.ForeignKey('User', on_delete=models.SET_NULL, null=True, blank=True)  # Asociación con User
+    fixture_id = models.CharField(null=False, blank=False)
+    user_id = models.CharField(null=True, blank=True)
     quantity = models.IntegerField()
     datetime = models.DateTimeField(default=timezone.now)
     group_id = models.CharField(max_length=10, null=True, blank=True)
@@ -69,7 +69,7 @@ class Bonos(models.Model):
 
 
 class User(models.Model):
-    user_id = models.IntegerField(unique=True)
+    user_id = models.CharField(unique=True)
     username = models.CharField(max_length=100)
     email = models.EmailField(max_length=100)
     first_name = models.CharField(max_length=100)
@@ -80,17 +80,15 @@ class User(models.Model):
 
     def __str__(self):
         return f"User {self.username} ({self.user_id})"
-    
-    
+
+
 class Recommendation(models.Model):
     user = models.ForeignKey('User', on_delete=models.CASCADE)
     fixture = models.ForeignKey('Fixture', on_delete=models.CASCADE)
-    recommended_at = models.DateTimeField(default=timezone.now)
-    score = models.FloatField()  # Ponderación de la recomendación según la fórmula
-    processed = models.BooleanField(default=False)  # Para saber si ya fue mostrada
-
-    class Meta:
-        unique_together = ('user', 'fixture')  # Evitar duplicados exactos
+    league_name = models.CharField(max_length=100, null=True, blank=True)
+    round = models.CharField(max_length=100, null=True, blank=True)
+    benefit_score = models.FloatField()  # Ponderador calculado para la recomendación
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Recommendation for User {self.user_id} - Fixture {self.fixture_id}"
+        return f"Recommendation for User {self.user.username} on Fixture {self.fixture.fixture_id} with score {self.benefit_score}"

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Fixture, Bonos, User
+from .models import Fixture, Bonos, User, Recommendation
 
 class FixtureSerializer(serializers.ModelSerializer):
     class Meta:
@@ -19,4 +19,10 @@ class BonosSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['user_id', 'username', 'email', 'first_name', 'last_name', 'wallet', 'created_at', 'updated_at']
+        fields = ['user_id', 'username', 'email', 'first_name', 'last_name', 'wallet']
+
+
+class RecommendationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Recommendation
+        fields = '__all__'

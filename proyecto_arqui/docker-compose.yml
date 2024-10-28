@@ -34,6 +34,47 @@ services:
       - DB_HOST=postgres
       - DB_PORT=5432
 
+  producer:
+    build:
+      context: ./workers
+      dockerfile: Dockerfile
+    command: uvicorn producer:app --reload --host 0.0.0.0 --port 5000
+    volumes:
+      - ./workers:/opt/
+    expose:
+      - 5000
+    ports:
+      - '5000:5000' 
+    environment:
+      CELERY_BROKER_URL: redis://redis-broker:6379/0
+    depends_on:
+      - redis-broker
+    networks:
+      - app-network
+
+  consumer:
+    build:
+      context: ./workers
+      dockerfile: Dockerfile
+    deploy:
+      replicas: 2
+    command: celery -A consumer.celery_app worker --loglevel=INFO --purge --concurrency=1
+    volumes:
+      - ./workers:/opt/
+    depends_on:
+      - producer
+    environment:
+      CELERY_BROKER_URL: redis://redis-broker:6379/0
+    networks:
+      - app-network
+
+  redis-broker:
+    image: redis:7
+    volumes:
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+    networks:
+      - app-network
+
   mqtt-subscriber-info:
     depends_on:
       - api

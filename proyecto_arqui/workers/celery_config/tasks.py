@@ -1,24 +1,42 @@
-# celery
 from celery import shared_task
-from celery_config.controllers import sum_to_n
-
-# standard
-import time
-
-# The "shared_task" decorator allows creation
-# of Celery tasks for reusable apps as it doesn't
-# need the instance of the Celery app.
-# @celery_app.task()
-@shared_task()
-def add(x, y):
-    return x + y
+import requests
 
 @shared_task
-def wait_and_return():
-    time.sleep(20)
-    return 'Hello World!'
+def calculate_recommendations(user_id, fixture_id):
+    # Paso 1: Obtener el historial de compras del usuario desde Django
+    url = f"http://api:8000/user_purchases/{user_id}/"
+    response = requests.get(url)
+    if response.status_code != 200:
+        return {"error": "No se pudo obtener el historial de compras"}
 
-@shared_task
-def sum_to_n_job(number):
-    result = sum_to_n(number)
-    return result
+    purchases = response.json()
+
+    # Paso 2: Calcular estadísticas y beneficios de próximos partidos
+    recommendations = []
+    for purchase in purchases:
+        fixture_id = purchase['fixture']['fixture_id']
+        league_round = purchase['fixture']['league_round']
+        odds_home_value = purchase['fixture']['odds_home_value']
+        success_rate = purchase.get('success_rate', 1)  # Porcentaje de éxito de apuestas previas
+        pond_score = (success_rate * league_round) / max(odds_home_value, 1)
+
+        recommendations.append({
+            "fixture_id": fixture_id,
+            "league_name": purchase['fixture']['league_name'],
+            "round": league_round,
+            "benefit_score": pond_score
+        })
+
+    # Ordenar y seleccionar las 3 mejores recomendaciones
+    top_recommendations = sorted(recommendations, key=lambda x: x["benefit_score"], reverse=True)[:3]
+
+    # Paso 3: Enviar recomendaciones a Django para almacenarlas
+    for recommendation in top_recommendations:
+        post_url = "http://api:8000/store_recommendation/"
+        response = requests.post(post_url, json={
+            "user_id": user_id,
+            "fixture_id": recommendation["fixture_id"],
+            "league_name": recommendation["league_name"],
+            "round": recommendation["round"],
+            "benefit_score": recommendation["benefit_score"]
+        })
