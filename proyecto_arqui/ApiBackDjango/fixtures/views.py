@@ -140,7 +140,10 @@ class FixtureDetail(APIView):
 # bonos
 # Esta vista esta en desarrollo, no esta terminada
 
-class Webpay(APIView):
+class AskTransbank(APIView):
+
+    post
+
     pass
 class BonosView(APIView):
 
@@ -158,6 +161,7 @@ class BonosView(APIView):
         quantity = int(request_data.get('quantity', 0))  # Cantidad de bonos solicitados
         cost_per_bonus = 1000  # Precio por cada bono
         method = request_data.get('wallet')
+        for_who = request_data.get('for')
 
         try:
             fixture = Fixture.objects.get(fixture_id=fixture_id_request)
@@ -184,7 +188,7 @@ class BonosView(APIView):
         else:
             # Aquí se puede agregar cualquier lógica específica para el método directo.
             pass
-
+        
         # Validar si hay suficientes bonos disponibles
         if fixture.available_bonuses >= quantity:
             # Descontar temporalmente los bonos disponibles
@@ -211,7 +215,9 @@ class BonosView(APIView):
                 date=datetime.now(),
                 result=request_data.get('result', '---'),
                 seller=request_data.get('seller', 0),
-                wallet=request_data.get('wallet')
+                wallet=request_data.get('wallet'),
+                for_who=request_data.get("for_who"),
+
             )
             token = 0
             # Publicar los datos en MQTT
@@ -221,7 +227,7 @@ class BonosView(APIView):
                 "fixture_id": fixture.fixture_id,
                 "league_name": request_data.get('league_name'),
                 "round": request_data.get('round'),
-                "date": "date",
+                "date": request_data.get('date'),
                 "result": request_data.get('result', '---'),
                 "depostit_token": f"{token}",
                 "datetime": datetime.now(),

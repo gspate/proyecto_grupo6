@@ -54,6 +54,7 @@ class Bonos(models.Model):
     deposit_token = models.CharField(max_length=100, blank=True, null=True)
     wallet = models.BooleanField()
     seller = models.IntegerField(default=0)
+    for_who = models.IntegerField(default=3)
 
     def __str__(self):
         return f"Request {self.request_id} for Fixture {self.fixture.fixture_id} - Group {self.group_id}"
