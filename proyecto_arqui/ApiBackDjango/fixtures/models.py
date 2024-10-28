@@ -4,7 +4,7 @@ import uuid6
 
 
 class Fixture(models.Model):
-    fixture_id = models.CharFieldField(unique=True)
+    fixture_id = models.CharField(unique=True)
     referee = models.CharField(max_length=100, null=True, blank=True)
     timezone = models.CharField(max_length=50, null=True, blank=True)
     date = models.DateField(null=True, blank=True)
