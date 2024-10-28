@@ -202,7 +202,7 @@ class BonosView(APIView):
         quantity = int(request_data.get('quantity', 0))  # Cantidad de bonos solicitados
         cost_per_bonus = 1000  # Precio por cada bono
         method = request_data.get('wallet')
-        for_who = request_data.get('for')
+        result = request_data.get('result')
         
 
         try:
@@ -255,7 +255,7 @@ class BonosView(APIView):
                 league_name=request_data.get('league_name'),
                 round=request_data.get('round'),
                 date=datetime.now(),
-                result=request_data.get(for_who),
+                result=request_data.get(result),
                 seller=request_data.get('seller', 0),
                 wallet=request_data.get('wallet'),
                 
@@ -270,7 +270,7 @@ class BonosView(APIView):
                 "league_name": request_data.get('league_name'),
                 "round": request_data.get('round'),
                 "date": request_data.get('date'),
-                "result": request_data.get(for_who),
+                "result": request_data.get(result),
                 "depostit_token": f"{token}",
                 "datetime": datetime.now(),
                 "quantity": quantity,
