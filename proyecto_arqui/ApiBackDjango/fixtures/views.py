@@ -28,7 +28,7 @@ MQTT_PORT = 9000                  # Puerto del broker
 MQTT_USER = 'students'            # Usuario
 MQTT_PASSWORD = 'iic2173-2024-2-students'  # Contraseña
 
-tx = Transaction(WebpayOptions(IntegrationCommerceCodes.WEBPAY_PLUS, IntegrationApiKeys.WEBPAY, IntegrationType.TEST))
+#tx = Transaction(WebpayOptions(IntegrationCommerceCodes.WEBPAY_PLUS, IntegrationApiKeys.WEBPAY, IntegrationType.TEST))
 
 
 
