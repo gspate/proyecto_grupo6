@@ -248,34 +248,35 @@ class BonosView(APIView):
             # Crear la solicitud de bono
             bonus_request = Bonos.objects.create(
                 request_id=request_id,
-                fixture_id=fixture,
+                fixture_id=fixture.fixture_id,
                 user=user,
                 quantity=quantity,
-                group_id=request_data.get('group_id'),
-                league_name=request_data.get('league_name'),
-                round=request_data.get('round'),
-                date=datetime.now(),
+                group_id="6",
+                league_name=fixture.league_name,
+                round=fixture.league_round,
+                datetime=datetime.now(),# arreglar despues
+                date=fixture.date,
                 result=request_data.get(result),
-                seller=request_data.get('seller', 0),
+                seller=0,
                 wallet=request_data.get('wallet'),
-                
+                quantity=quantity
 
             )
             token = 0### deposit token
             # Publicar los datos en MQTT
             data = {
                 "request_id": str(bonus_request.request_id),
-                "group_id": request_data.get('group_id'),
-                "fixture_id": fixture.fixture_id,
-                "league_name": request_data.get('league_name'),
-                "round": request_data.get('round'),
-                "date": request_data.get('date'),
+                "group_id": "6",
+                "fixture_id": fixture_id_request,
+                "league_name": fixture.league_name,
+                "round": fixture.league_round,
+                "date": fixture.date,
                 "result": request_data.get(result),
                 "depostit_token": f"{token}",
                 "datetime": datetime.now(),
                 "quantity": quantity,
                 "wallet": request_data.get('wallet'),
-                "seller": request_data.get('seller', 0),
+                "seller": 0,
                 
             }
 
