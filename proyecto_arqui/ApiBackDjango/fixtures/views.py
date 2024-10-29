@@ -241,8 +241,8 @@ class BonosView(APIView):
                     resp = tx.create(request_id, session_id, total_cost, "http://localhost:5173/webpay") 
                     token = resp.get("token")
                     url = resp.get("url")
-                except:
-                    return Response({"error": "Problema TBK tx"}, status=status.HTTP_400_BAD_REQUEST)
+                except Exception as e:
+                    return Response({"error": f"Problema TBK tx {e}"}, status=status.HTTP_400_BAD_REQUEST)
                 if fixture.available_bonuses >= quantity:
                 # Descontar temporalmente los bonos disponibles
                     fixture.available_bonuses -= quantity
