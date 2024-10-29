@@ -940,7 +940,7 @@ class BonusHistoryView(APIView):
 class UserPurchasesView(APIView):
     def get(self, request, user_id, *args, **kwargs):
         # Filtrar las compras por usuario
-        bonos = Bonos.objects.filter(user__user_id=user_id)
+        bonos = Bonos.objects.filter(user_id=user_id)
         serializer = BonosSerializer(bonos, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
