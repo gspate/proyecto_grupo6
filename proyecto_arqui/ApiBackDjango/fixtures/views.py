@@ -239,7 +239,7 @@ class BonosView(APIView):
                         buy_order = str(request_id)[:20]
                     except:
                         return Response({"error": "uuid6 failed"}, status=status.HTTP_400_BAD_REQUEST)
-                    resp = tx.create(buy_order, session_id, total_cost, "http://localhost:5173/webpay") 
+                    resp = tx.create(buy_order, session_id, total_cost, "http://localhost:5173/webpayresult") 
                     token = resp.get("token")
                     url = resp.get("url")
                 except Exception as e:
