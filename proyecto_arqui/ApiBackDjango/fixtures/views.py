@@ -22,7 +22,7 @@ from transbank.webpay.webpay_plus.transaction import Transaction
 from transbank.common.options import WebpayOptions
 from transbank.common.integration_type import IntegrationType
 from transbank.common.integration_commerce_codes import IntegrationCommerceCodes
-
+import logging
 
 # Configuración del broker MQTT
 MQTT_HOST = 'broker.iic2173.org'  # Dirección del broker
@@ -283,7 +283,8 @@ class BonosView(APIView):
                         "wallet": request_data.get('wallet'),
                         "seller": 0
                     }
-                except:
+                except Exception as e:
+                    logging.log(e)
                     return Response({"error": "Problema TBK 2"}, status=status.HTTP_400_BAD_REQUEST)
 
                 # Convertir el diccionario a una cadena JSON
