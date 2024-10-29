@@ -225,14 +225,17 @@ class BonosView(APIView):
         else: #Transbank
             try:
                 session_id = user.user_id
-                tx = Transaction(WebpayOptions(
-                        IntegrationCommerceCodes.WEBPAY_PLUS, 
-                        "579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C", 
-                        IntegrationType.TEST
-                        ))
+                try:
+                    tx = Transaction(WebpayOptions(
+                            IntegrationCommerceCodes.WEBPAY_PLUS, 
+                            "579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C", 
+                            IntegrationType.TEST
+                            ))
 
-                        # Crea la transacción y obtiene el token y la URL
-                resp = tx.create(fixture.fixture_id, session_id, total_cost, "https://web.arqui-2024-gspate.me/confirmTBK")
+                            # Crea la transacción y obtiene el token y la URL
+                    resp = tx.create(fixture.fixture_id, session_id, total_cost, "https://web.arqui-2024-gspate.me/confirmTBK")
+                except:
+                    return Response({"error": "Problema TBK tx"}, status=status.HTTP_400_BAD_REQUEST)
                 if fixture.available_bonuses >= quantity:
                 # Descontar temporalmente los bonos disponibles
                     fixture.available_bonuses -= quantity
@@ -288,7 +291,36 @@ class BonosView(APIView):
                     port=MQTT_PORT,
                     auth={'username': MQTT_USER, 'password': MQTT_PASSWORD}
                 )
-                return Response({"token": resp.token, "url": resp.url}, status=status.HTTP_200_OK)
+                try:
+                    job_master_url = "http://producer:5000/job"
+                    data = {
+                        "user_id": user.user_id,
+                        "fixture_id": fixture.fixture_id,
+                    }
+                    response = requests.post(job_master_url, json=data)
+
+                    if response.status_code == 200:
+                        return Response({
+                            "request_id": str(bonus_request.request_id),
+                            "message": "Bonos comprados exitosamente, dinero descontado exitosamente y recomendaciones generadas", "token": resp.token, "url": resp.url
+                        }, status=status.HTTP_201_CREATED)
+                    else:
+                        return Response({
+                            "request_id": str(bonus_request.request_id),
+                            "message": "Bonos comprados y dinero descontado exitosamente, pero recomendacion no generada", "token": resp.token, "url": resp.url
+                        }, status=status.HTTP_201_CREATED)
+                except Exception as e:
+                    return Response({
+                            "request_id": str(bonus_request.request_id),
+                            "message": "Bonos comprados y dinero descontado exitosamente, pero recomendacion no generada", "token": resp.token, "url": resp.url
+                        }, status=status.HTTP_201_CREATED)
+
+                
+
+
+
+
+
             except Exception as e:
                 # En caso de error, devuelve un mensaje
                 return Response({"error": "Problemas en TBK", "detalle": str(e)}, status=status.HTTP_400_BAD_REQUEST)
