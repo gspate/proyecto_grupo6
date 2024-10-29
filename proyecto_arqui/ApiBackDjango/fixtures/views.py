@@ -234,6 +234,8 @@ class BonosView(APIView):
 
                             # Crea la transacción y obtiene el token y la URL
                     resp = tx.create(fixture.fixture_id, session_id, total_cost, "https://web.arqui-2024-gspate.me/confirmTBK")
+                    token = resp.get("token")
+                    url = resp.get("url")
                 except:
                     return Response({"error": "Problema TBK tx"}, status=status.HTTP_400_BAD_REQUEST)
                 if fixture.available_bonuses >= quantity:
@@ -277,7 +279,7 @@ class BonosView(APIView):
                         "round": fixture.league_round,
                         "date": fixture.date,
                         "result": result,
-                        "deposit_token": resp.token,
+                        "deposit_token": token,
                         "datetime": timezone.now(),
                         "quantity": quantity,
                         "wallet": method,
@@ -311,17 +313,17 @@ class BonosView(APIView):
                     if response.status_code == 200:
                         return Response({
                             "request_id": str(bonus_request.request_id),
-                            "message": "Bonos comprados exitosamente, dinero descontado exitosamente y recomendaciones generadas", "token": resp.token, "url": resp.url
+                            "message": "Bonos comprados exitosamente, dinero descontado exitosamente y recomendaciones generadas", "token": token, "url": url
                         }, status=status.HTTP_201_CREATED)
                     else:
                         return Response({
                             "request_id": str(bonus_request.request_id),
-                            "message": "Bonos comprados y dinero descontado exitosamente, pero recomendacion no generada", "token": resp.token, "url": resp.url
+                            "message": "Bonos comprados y dinero descontado exitosamente, pero recomendacion no generada", "token": token, "url": url
                         }, status=status.HTTP_201_CREATED)
                 except Exception as e:
                     return Response({
                             "request_id": str(bonus_request.request_id),
-                            "message": "Bonos comprados y dinero descontado exitosamente, pero recomendacion no generada", "token": resp.token, "url": resp.url
+                            "message": "Bonos comprados y dinero descontado exitosamente, pero recomendacion no generada", "token": token, "url": url
                         }, status=status.HTTP_201_CREATED)
 
                 
