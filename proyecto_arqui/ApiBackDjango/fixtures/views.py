@@ -18,8 +18,6 @@ import requests
 import paho.mqtt.publish as publish
 import json
 import uuid6
-import requests
-from  saveAndpublish import saveAndPublish
 from transbank.webpay.webpay_plus.transaction import Transaction
 from transbank.common.options import WebpayOptions
 from transbank.common.integration_type import IntegrationType
