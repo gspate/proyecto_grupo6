@@ -239,7 +239,7 @@ class BonosView(APIView):
                         buy_order = str(request_id)[:20]
                     except:
                         return Response({"error": "uuid6 failed"}, status=status.HTTP_400_BAD_REQUEST)
-                    resp = tx.create(buy_order, session_id, total_cost, "http://localhost:5173/webpayresult") 
+                    resp = tx.create(buy_order, session_id, total_cost, "https://web.arqui-2024-gspate.me/webpayresult") 
                     token = resp.get("token")
                     url = resp.get("url")
                 except Exception as e:
@@ -440,11 +440,16 @@ class VerificarEstadoTransaccion(APIView):
             # Confirma la transacción con Webpay usando el token_ws
             response = Transaction.commit(token_ws)
 
-            request_id = response['buy_order']
+            request_id_cut = response['buy_order']
+            try:
+                bono_object = Bonos.objects.filter(request_id__startswith=request_id_cut).first()
+            except:
+                return Response({"error": "Token de transacción no proporcionado"}, status=status.HTTP_400_BAD_REQUEST)
+
             try:
                 
                 data = {
-                "request_id": request_id,
+                "request_id": bono_object.request_id,
                 "group_id": "6",
                 "seller": 0,
                 "valid": True
@@ -452,6 +457,14 @@ class VerificarEstadoTransaccion(APIView):
 
                 # Convertir el diccionario a una cadena JSON
                 json_data = json.dumps(data, default=str)
+                
+                
+                
+            except:
+                return Response({"message": "Problema con data json dump"}, status=status.HTTP_404_NOT_FOUND)
+                
+            # Verifica el estado de la transacción
+            if response['response_code'] == 0:
                 try:
                     publish.single(
                         topic='fixtures/validations',
@@ -462,14 +475,6 @@ class VerificarEstadoTransaccion(APIView):
                     )
                 except:
                     return Response({"message": "problema con publish"}, status=status.HTTP_400_BAD_REQUEST)
-                
-                
-            except:
-                return Response({"message": "request id no reconocido :C"}, status=status.HTTP_404_NOT_FOUND)
-                
-            # Verifica el estado de la transacción
-            if response['response_code'] == 0:
-                # Procesa la transacción como exitosa
                 return Response({
                     "message": "Pago exitoso",
                     "buy_order": response['buy_order'],  # Acceso como clave de diccionario
