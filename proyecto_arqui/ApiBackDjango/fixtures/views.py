@@ -234,7 +234,11 @@ class BonosView(APIView):
                             ))
 
                             # Crea la transacción y obtiene el token y la URL
-                    resp = tx.create(fixture.fixture_id, session_id, total_cost, "http://localhost:5173/webpay") 
+                    try:
+                        request_id = uuid6.uuid6()
+                    except:
+                        return Response({"error": "uuid6 failed"}, status=status.HTTP_400_BAD_REQUEST)
+                    resp = tx.create(request_id, session_id, total_cost, "http://localhost:5173/webpay") 
                     token = resp.get("token")
                     url = resp.get("url")
                 except:
@@ -245,11 +249,8 @@ class BonosView(APIView):
                     fixture.save()
 
                 # Generar un UUIDv6 para el request_id
-                try:
-                    request_id = uuid6.uuid6()
-                except:
-                    return Response({"error": "uuid6 failed"}, status=status.HTTP_400_BAD_REQUEST)
-
+                
+            
                 try:
                     bonus_request = Bonos.objects.create(
                     request_id=request_id,
@@ -427,17 +428,18 @@ class VerificarEstadoTransaccion(APIView):
         token_ws = request.data.get("token_ws")
     
     # Asegúrate de que request_id también se reciba en la solicitud
-        request_id = request.data.get("request_id")
+        
 
         # Verifica si el token_ws fue enviado
         if not token_ws:
             return Response({"error": "Token de transacción no proporcionado"}, status=status.HTTP_400_BAD_REQUEST)
-        if not request_id:
-            return Response({"error": "request id no proporcionado"}, status=status.HTTP_400_BAD_REQUEST)
+        
 
         try:
             # Confirma la transacción con Webpay usando el token_ws
             response = Transaction.commit(token_ws)
+
+            request_id = response['buy_order']
             try:
                 
                 data = {
@@ -465,7 +467,7 @@ class VerificarEstadoTransaccion(APIView):
                 return Response({"message": "request id no reconocido :C"}, status=status.HTTP_404_NOT_FOUND)
                 
             # Verifica el estado de la transacción
-            if response['status'] == "AUTHORIZED":
+            if response['response_code'] == 0:
                 # Procesa la transacción como exitosa
                 return Response({
                     "message": "Pago exitoso",
