@@ -247,50 +247,59 @@ class BonosView(APIView):
                 except:
                     return Response({"error": "uuid6 failed"}, status=status.HTTP_400_BAD_REQUEST)
 
-                
-                bonus_request = Bonos.objects.create(
-                request_id=request_id,
-                fixture_id=fixture.fixture_id,
-                user_id=user.user_id,
-                quantity=quantity,
-                group_id="6",
-                league_name=fixture.league_name,
-                round=fixture.league_round,
-                datetime=timezone.now(),# arreglar despues
-                date=fixture.date,
-                result=result,
-                seller=0,
-                wallet=method,
-                acierto=False
-            )
+                try:
+                    bonus_request = Bonos.objects.create(
+                    request_id=request_id,
+                    fixture_id=fixture.fixture_id,
+                    user_id=user.user_id,
+                    quantity=quantity,
+                    group_id="6",
+                    league_name=fixture.league_name,
+                    round=fixture.league_round,
+                    datetime=timezone.now(),# arreglar despues
+                    date=fixture.date,
+                    result=result,
+                    seller=0,
+                    wallet=method,
+                    acierto=False
+                    )
+                except:
+                    return Response({"error": "Problema TBK 1"}, status=status.HTTP_400_BAD_REQUEST)
 
 
-                # PERO SI PUBLICAMOS AL MQTTT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                data = {
-                    "request_id": request_id,
-                    "group_id": "6",
-                    "fixture_id": fixture_id_request,
-                    "league_name": fixture.league_name,
-                    "round": fixture.league_round,
-                    "date": fixture.date,
-                    "result": request_data.get('result'),
-                    "depostit_token": resp.token,
-                    "datetime": timezone.now(),
-                    "quantity": quantity,
-                    "wallet": request_data.get('wallet'),
-                    "seller": 0
-                }
+                # PERO SI PUBLICAMOS AL MQTTT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\
+                try:
+                    data = {
+                        "request_id": request_id,
+                        "group_id": "6",
+                        "fixture_id": fixture_id_request,
+                        "league_name": fixture.league_name,
+                        "round": fixture.league_round,
+                        "date": fixture.date,
+                        "result": request_data.get('result'),
+                        "depostit_token": resp.token,
+                        "datetime": timezone.now(),
+                        "quantity": quantity,
+                        "wallet": request_data.get('wallet'),
+                        "seller": 0
+                    }
+                except:
+                    return Response({"error": "Problema TBK 2"}, status=status.HTTP_400_BAD_REQUEST)
 
                 # Convertir el diccionario a una cadena JSON
-                json_data = json.dumps(data, default=str)
+                try:
+                    json_data = json.dumps(data, default=str)
 
-                publish.single(
-                    topic='fixtures/request',
-                    payload=json_data,
-                    hostname=MQTT_HOST,
-                    port=MQTT_PORT,
-                    auth={'username': MQTT_USER, 'password': MQTT_PASSWORD}
-                )
+                    publish.single(
+                        topic='fixtures/request',
+                        payload=json_data,
+                        hostname=MQTT_HOST,
+                        port=MQTT_PORT,
+                        auth={'username': MQTT_USER, 'password': MQTT_PASSWORD}
+                    )
+                except:
+                    return Response({"error": "Problema TBK 3"}, status=status.HTTP_400_BAD_REQUEST)
+                
                 try:
                     job_master_url = "http://producer:5000/job"
                     data = {
@@ -316,10 +325,6 @@ class BonosView(APIView):
                         }, status=status.HTTP_201_CREATED)
 
                 
-
-
-
-
 
             except Exception as e:
                 # En caso de error, devuelve un mensaje
