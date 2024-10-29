@@ -15,12 +15,7 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.urls import path
-from fixtures.views import (
-    FixtureList, FixtureDetail, BonusRequestView, BonusValidationView, 
-    BonosView, BonusHistoryView, UserView, UserDetailView,
-    StoreRecommendationView, UserPurchasesView, UserRecommendationsView, addwallet
-)
-
+from fixtures.views import FixtureList, FixtureDetail, BonusRequestView, BonusValidationView, BonosView, BonusHistoryView, UserView, UserDetailView, addwallet, VerificarEstadoTransaccion
 urlpatterns = [
     # Fixtures
     path('fixtures', FixtureList.as_view(), name='fixture_list'),
@@ -33,16 +28,15 @@ urlpatterns = [
 
     # Usuarios
     path('users', UserView.as_view(), name='user_list'),
-    path('users/<str:user_id>', UserDetailView.as_view(), name='user_detail'),
+    path('users/<int:user_id>', UserDetailView.as_view(), name='user_detail'),
 
     # Bonos
     path('bonos', BonosView.as_view(), name='bonos_list'),
-    
-    # Bonos
-    path('wallet/add', addwallet.as_view(), name='hola'),
+    # path('bonos/<str:requests_id>', BonosView.as_view(), name='bonos_list'), 
+    path('wallet/add', addwallet.as_view(), name='add_funds'),
 
-    # Recomendaciones
-    path("store_recommendation", StoreRecommendationView.as_view(), name="store_recommendation"),
-    path("user_purchases/<str:user_id>", UserPurchasesView.as_view(), name="user_purchases"),
-    path("user_recommendations/<str:user_id>", UserRecommendationsView.as_view(), name="user_recommendations")
-]
+
+    #TransbankConfirm
+    path('confirmTBK',VerificarEstadoTransaccion.as_view(), name= "TBK_confirm"),
+    
+]   

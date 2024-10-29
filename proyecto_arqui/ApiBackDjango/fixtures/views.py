@@ -298,8 +298,8 @@ class BonosView(APIView):
             except:
                 return Response({"error": "uuid6 failed"}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Crear la solicitud de bono
-            bonus_request = Bonos.objects.create(
+            if method:
+                bonus_request = Bonos.objects.create(
                 request_id=request_id,
                 fixture_id=fixture.fixture_id,
                 user_id=user.user_id,
@@ -316,11 +316,9 @@ class BonosView(APIView):
                 #for_who=for_who
             )
 
-            token = 0 # deposit token
-
             # Publicar los datos en MQTT
             data = {
-                "request_id": str(bonus_request.request_id),
+                "request_id": request_id,
                 "group_id": "6",
                 "fixture_id": fixture.fixture_id,
                 "league_name": fixture.league_name,
@@ -448,25 +446,17 @@ class VerificarEstadoTransaccion(APIView):
 
             # Publicar los datos en MQTT
             data = {
-                "request_id": str(bonus_request.request_id),
+                "request_id": request_id,
                 "group_id": "6",
-                "fixture_id": fixture.fixture_id,
-                "league_name": fixture.league_name,
-                "round": fixture.league_round,
-                "date": fixture.date,
-                "result": result,
-                "depostit_token": f"{deposit_token}",
-                "datetime": timezone.now(),
-                "quantity": quantity,
-                "wallet": method,
-                "seller": 0
+                "seller": 0,
+                "valid": True
             }
 
             # Convertir el diccionario a una cadena JSON
             json_data = json.dumps(data, default=str)
             
             publish.single(
-                topic='fixtures/request',
+                topic='fixtures/validations',
                 payload=json_data,
                 hostname=MQTT_HOST,
                 port=MQTT_PORT,
