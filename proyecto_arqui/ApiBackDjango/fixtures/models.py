@@ -60,13 +60,11 @@ class Bonos(models.Model):
     date = models.DateField(default=timezone.now)
     result = models.CharField(max_length=50, default='---')
     deposit_token = models.CharField(max_length=100, blank=True, null=True)
+    datetime = models.CharField(max_length=100, blank=True, null=True)
     wallet = models.BooleanField()
     acierto = models.BooleanField(default=False)
     seller = models.IntegerField(default=0)
     status = models.CharField(max_length=10, choices=ESTADOS_BONO, default='pendiente')
-
-    def __str__(self):
-        return f"Request {self.request_id} for Fixture {self.fixture_id} - Group {self.group_id}"
 
 
 class User(models.Model):
@@ -88,5 +86,5 @@ class Recommendation(models.Model):
     fixture_id = models.CharField(null=False, blank=False)
     league_name = models.CharField(max_length=100, null=True, blank=True)
     round = models.CharField(max_length=100, null=True, blank=True)
-    benefit_score = models.FloatField()  # Ponderador calculado para la recomendación
+    benefit_score = models.FloatField()  # Ponderador calculado para la recomendaci贸n
     created_at = models.DateTimeField(auto_now_add=True)
