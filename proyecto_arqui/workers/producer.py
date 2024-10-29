@@ -7,8 +7,8 @@ from typing import Optional
 app = FastAPI()
 
 class RecommendationRequest(BaseModel):
-    user_id: int
-    fixture_id: int
+    user_id: str
+    fixture_id: str
 
 @app.post("/job")
 async def create_job(data: RecommendationRequest):
