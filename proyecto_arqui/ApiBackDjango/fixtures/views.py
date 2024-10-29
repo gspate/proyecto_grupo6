@@ -273,11 +273,17 @@ class BonosView(APIView):
 
 
     def saveAndPublish(self, **kwargs):
-        fixture = fixture
-        user = user
-        quantity = quantity
-        result = result
-        method = method
+        # fixture = fixture
+        # user = user
+        # quantity = quantity
+        # result = result
+        # method = method
+        
+        fixture = kwargs.get('fixture')
+        user = kwargs.get('user')
+        quantity = kwargs.get('quantity')
+        result = kwargs.get('result')
+        method = kwargs.get('method')
 
         # Validar si hay suficientes bonos disponibles
         if fixture.available_bonuses >= quantity:
