@@ -221,7 +221,6 @@ class BonosView(APIView):
         except User.DoesNotExist:
             return Response({"error": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND)
 
-
         total_cost = cost_per_bonus * quantity
 
         if method:
@@ -229,23 +228,19 @@ class BonosView(APIView):
             if user.wallet < total_cost:
                 return Response({"error": "Fondos insuficientes"}, status=status.HTTP_400_BAD_REQUEST)
 
+            self.saveAndPublish(fixture=fixture,user=user,quantity=quantity,result=result,method=method)
+
             # Descontar el dinero de la billetera del usuario
             user.wallet -= total_cost
             user.save()
-            self.saveAndPublish(fixture=fixture,user=user,quantity=quantity,result=result,method=method,for_who=for_who,deposit_token='None')
 
         else: #Start transbank process
-            
             try:
-                
-                return self.create_transaction(fixture=fixture,user=user,quantity=quantity,result=result,method=method,for_who=for_who, total_cost=total_cost)
-                        
+                return self.create_transaction(fixture=fixture,user=user,quantity=quantity,result=result,method=method,for_who=for_who, total_cost=total_cost)  
             except:
                 return Response({"error": "Problemas en TBK"}, status=status.HTTP_400_BAD_REQUEST)
 
 
-            
-        
     def create_transaction(self,**kwargs):
         fixture=fixture
         user=user
@@ -258,6 +253,7 @@ class BonosView(APIView):
         method=method
         for_who=for_who
         deposit_token=deposit_token
+
         try:
             # Configura la transacción con Webpay Plus en modo integración
             tx = Transaction(WebpayOptions(
@@ -265,26 +261,25 @@ class BonosView(APIView):
                     "579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C", 
                     IntegrationType.TEST
                     ))
-
-                    # Crea la transacción y obtiene el token y la URL
+            
+            # Crea la transacción y obtiene el token y la URL
             resp = tx.create(fixture.fixture_id, session_id, total_cost, "https://web.arqui-2024-gspate.me/confirmTBK")
             self.saveAndPublish(fixture=fixture,user=user,quantity=quantity,result=result,method=method,for_who=for_who,deposit_token=str(resp.token))
             return Response({"token": resp.token, "url": resp.url}, status=status.HTTP_200_OK)
+        
         except Exception as e:
             # En caso de error, devuelve un mensaje
             return Response({"error": "Problemas en TBK", "detalle": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        
-    
 
 
     def saveAndPublish(self, **kwargs):
-        fixture=fixture
-        user=user
-        quantity=quantity
-        result=result
-        method=method
-        for_who=for_who
-        deposit_token=deposit_token
+        fixture = fixture
+        user = user
+        quantity = quantity
+        result = result
+        method = method
+
+        # Validar si hay suficientes bonos disponibles
         if fixture.available_bonuses >= quantity:
             # Descontar temporalmente los bonos disponibles
             fixture.available_bonuses -= quantity
@@ -296,8 +291,8 @@ class BonosView(APIView):
             except:
                 return Response({"error": "uuid6 failed"}, status=status.HTTP_400_BAD_REQUEST)
 
-            if method:
-                bonus_request = Bonos.objects.create(
+            # Crear la solicitud de bono
+            bonus_request = Bonos.objects.create(
                 request_id=request_id,
                 fixture_id=fixture.fixture_id,
                 user_id=user.user_id,
@@ -310,20 +305,20 @@ class BonosView(APIView):
                 result=result,
                 seller=0,
                 wallet=method
-                #Falta meter en el model esto
-                #for_who=for_who
             )
+
+            token = 0 # deposit token
 
             # Publicar los datos en MQTT
             data = {
-                "request_id": request_id,
+                "request_id": str(bonus_request.request_id),
                 "group_id": "6",
                 "fixture_id": fixture.fixture_id,
                 "league_name": fixture.league_name,
                 "round": fixture.league_round,
                 "date": fixture.date,
                 "result": result,
-                "depostit_token": deposit_token,
+                "depostit_token": f"{token}",
                 "datetime": timezone.now(),
                 "quantity": quantity,
                 "wallet": method,
@@ -332,7 +327,7 @@ class BonosView(APIView):
 
             # Convertir el diccionario a una cadena JSON
             json_data = json.dumps(data, default=str)
-            
+
             publish.single(
                 topic='fixtures/request',
                 payload=json_data,
@@ -343,7 +338,7 @@ class BonosView(APIView):
 
             # Enviar información al job_master para calcular recomendaciones
             try:
-                job_master_url = "http://job_master:8000/api/calculate_recommendations/"
+                job_master_url = "http://producer:5000/job"
                 data = {
                     "user_id": user.user_id,
                     "fixture_id": fixture.fixture_id,
@@ -487,11 +482,7 @@ class VerificarEstadoTransaccion(APIView):
                     }, status=status.HTTP_201_CREATED)
         else:
             return Response({"error": "No hay suficientes bonos disponibles"}, status=status.HTTP_400_BAD_REQUEST)
-
-
         
-
-
 
 # mqtt/requests
 class BonusRequestView(APIView):
@@ -706,7 +697,7 @@ class StoreRecommendationView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-
+    
 class UserRecommendationsView(APIView):
     def get(self, request, user_id, *args, **kwargs):
         # Filtra las recomendaciones por el user_id especificado y ordena por benefit_score en orden descendente

@@ -43,15 +43,15 @@ class Fixture(models.Model):
 
 class Bonos(models.Model):
     ESTADOS_BONO = [
-        ('pendiente', 'Pendiente de Validaci贸n'),
+        ('pendiente', 'Pendiente de Validación'),
         ('ganado', 'Ganado - Pagado'),
         ('perdido', 'Perdido - No Pagado'),
-        ('procesado', 'Procesado - Sin Acci贸n'),
+        ('procesado', 'Procesado - Sin Acción'),
     ]
 
     request_id = models.UUIDField(unique=True, default=uuid6.uuid6, editable=False)
-    fixture = models.ForeignKey('Fixture', on_delete=models.CASCADE)
-    user = models.ForeignKey('User', on_delete=models.SET_NULL, null=True, blank=True)  # Asociaci贸n con User
+    fixture_id = models.CharField(null=False, blank=False)
+    user_id = models.CharField(null=True, blank=True)
     quantity = models.IntegerField()
     datetime = models.DateTimeField(default=timezone.now)
     group_id = models.CharField(max_length=10, null=True, blank=True)
@@ -62,11 +62,9 @@ class Bonos(models.Model):
     deposit_token = models.CharField(max_length=100, blank=True, null=True)
     datetime = models.CharField(max_length=100, blank=True, null=True)
     wallet = models.BooleanField()
+    acierto = models.BooleanField()
     seller = models.IntegerField(default=0)
     status = models.CharField(max_length=10, choices=ESTADOS_BONO, default='pendiente')
-
-    def __str__(self):
-        return f"Request {self.request_id} for Fixture {self.fixture.fixture_id} - Group {self.group_id}"
 
 
 class User(models.Model):
@@ -84,12 +82,9 @@ class User(models.Model):
 
 
 class Recommendation(models.Model):
-    user = models.ForeignKey('User', on_delete=models.CASCADE)
-    fixture = models.ForeignKey('Fixture', on_delete=models.CASCADE)
+    user_id = models.CharField(null=False, blank=False)
+    fixture_id = models.CharField(null=False, blank=False)
     league_name = models.CharField(max_length=100, null=True, blank=True)
     round = models.CharField(max_length=100, null=True, blank=True)
     benefit_score = models.FloatField()  # Ponderador calculado para la recomendaci贸n
     created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"Recommendation for User {self.user.username} on Fixture {self.fixture.fixture_id} with score {self.benefit_score}"
