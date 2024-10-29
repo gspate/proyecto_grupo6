@@ -234,7 +234,7 @@ class BonosView(APIView):
                             ))
 
                             # Crea la transacción y obtiene el token y la URL
-                    resp = tx.create(fixture.fixture_id, session_id, total_cost, "http://localhost:5173/") 
+                    resp = tx.create(fixture.fixture_id, session_id, total_cost, "http://localhost:5173/webpay") 
                     token = resp.get("token")
                     url = resp.get("url")
                 except:
