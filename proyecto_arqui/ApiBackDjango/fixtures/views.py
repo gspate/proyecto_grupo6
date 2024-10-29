@@ -19,8 +19,7 @@ import paho.mqtt.publish as publish
 import json
 import uuid6
 import requests
-
-
+from  saveAndpublish import saveAndPublish
 from transbank.webpay.webpay_plus.transaction import Transaction
 from transbank.common.options import WebpayOptions
 from transbank.common.integration_type import IntegrationType
@@ -240,8 +239,8 @@ class BonosView(APIView):
         else: #Start transbank process
             
             try:
-                tk = self.create_transaction(fixture=fixture, user=user, total_cost=total_cost)
-                return tk
+                
+                return self.create_transaction(fixture=fixture,user=user,quantity=quantity,result=result,method=method,for_who=for_who, total_cost=total_cost)
                         
             except:
                 return Response({"error": "Problemas en TBK"}, status=status.HTTP_400_BAD_REQUEST)
@@ -254,6 +253,13 @@ class BonosView(APIView):
         user=user
         session_id = user.user_id
         total_cost=total_cost
+        fixture=fixture
+        user=user
+        quantity=quantity
+        result=result
+        method=method
+        for_who=for_who
+        deposit_token=deposit_token
         try:
             # Configura la transacción con Webpay Plus en modo integración
             tx = Transaction(WebpayOptions(
@@ -263,7 +269,8 @@ class BonosView(APIView):
                     ))
 
                     # Crea la transacción y obtiene el token y la URL
-            resp = tx.create(fixture.fixture_id, session_id, total_cost, "https://web.arqui-2024-gspate.me/")
+            resp = tx.create(fixture.fixture_id, session_id, total_cost, "https://web.arqui-2024-gspate.me/confirmTBK")
+            self.saveAndPublish(fixture=fixture,user=user,quantity=quantity,result=result,method=method,for_who=for_who,deposit_token=str(resp.token))
             return Response({"token": resp.token, "url": resp.url}, status=status.HTTP_200_OK)
         except Exception as e:
             # En caso de error, devuelve un mensaje
@@ -272,6 +279,134 @@ class BonosView(APIView):
     
 
 
+    def saveAndPublish(self, **kwargs):
+        fixture=fixture
+        user=user
+        quantity=quantity
+        result=result
+        method=method
+        for_who=for_who
+        deposit_token=deposit_token
+        if fixture.available_bonuses >= quantity:
+            # Descontar temporalmente los bonos disponibles
+            fixture.available_bonuses -= quantity
+            fixture.save()
+
+            # Generar un UUIDv6 para el request_id
+            try:
+                request_id = uuid6.uuid6()
+            except:
+                return Response({"error": "uuid6 failed"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Crear la solicitud de bono
+            bonus_request = Bonos.objects.create(
+                request_id=request_id,
+                fixture_id=fixture.fixture_id,
+                user_id=user.user_id,
+                quantity=quantity,
+                group_id="6",
+                league_name=fixture.league_name,
+                round=fixture.league_round,
+                datetime=timezone.now(),# arreglar despues
+                date=fixture.date,
+                result=result,
+                seller=0,
+                wallet=method
+                #Falta meter en el model esto
+                #for_who=for_who
+            )
+
+            token = 0 # deposit token
+
+            # Publicar los datos en MQTT
+            data = {
+                "request_id": str(bonus_request.request_id),
+                "group_id": "6",
+                "fixture_id": fixture.fixture_id,
+                "league_name": fixture.league_name,
+                "round": fixture.league_round,
+                "date": fixture.date,
+                "result": result,
+                "depostit_token": deposit_token,
+                "datetime": timezone.now(),
+                "quantity": quantity,
+                "wallet": method,
+                "seller": 0
+            }
+
+            # Convertir el diccionario a una cadena JSON
+            json_data = json.dumps(data, default=str)
+            
+            publish.single(
+                topic='fixtures/request',
+                payload=json_data,
+                hostname=MQTT_HOST,
+                port=MQTT_PORT,
+                auth={'username': MQTT_USER, 'password': MQTT_PASSWORD}
+            )
+
+            # Enviar información al job_master para calcular recomendaciones
+            try:
+                job_master_url = "http://job_master:8000/api/calculate_recommendations/"
+                data = {
+                    "user_id": user.user_id,
+                    "fixture_id": fixture.fixture_id,
+                }
+                response = requests.post(job_master_url, json=data)
+
+                if response.status_code == 200:
+                    return Response({
+                        "request_id": str(bonus_request.request_id),
+                        "message": "Bonos comprados exitosamente, dinero descontado exitosamente y recomendaciones generadas"
+                    }, status=status.HTTP_201_CREATED)
+                else:
+                    return Response({
+                        "request_id": str(bonus_request.request_id),
+                        "message": "Bonos comprados y dinero descontado exitosamente, pero recomendacion no generada"
+                    }, status=status.HTTP_201_CREATED)
+            except Exception as e:
+                 return Response({
+                        "request_id": str(bonus_request.request_id),
+                        "message": "Bonos comprados y dinero descontado exitosamente, pero recomendacion no generada"
+                    }, status=status.HTTP_201_CREATED)
+        else:
+            return Response({"error": "No hay suficientes bonos disponibles"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class VerificarEstadoTransaccion(APIView):
+
+    def post(self, request, *args, **kwargs):
+        # Recibe el token_ws enviado por el frontend
+        token_ws = request.data.get("token_ws")
+
+        # Verifica si el token_ws fue enviado
+        if not token_ws:
+            return Response({"error": "Token de transacción no proporcionado"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Confirma la transacción con Webpay usando el token_ws
+            response = Transaction.commit(token_ws)
+
+            # Verifica el estado de la transacción
+            if response.status == "AUTHORIZED":
+                # Procesa la transacción como exitosa
+                return Response({
+                    "message": "Pago exitoso",
+                    "buy_order": response.buy_order,
+                    "amount": response.amount,
+                    "transaction_date": response.transaction_date,
+                    "card_detail": response.card_detail,
+                    "status": response.status
+                }, status=status.HTTP_200_OK)
+
+            else:
+                # Si la transacción no es exitosa, devuelve el estado específico
+                return Response({"message": "La transacción no fue exitosa", "status": response.status}, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            # Manejo de errores en caso de que falle la confirmación
+            return Response({"error": "Error al confirmar la transacción", "detalle": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
     def saveAndPublish(self, **kwargs):
         fixture=fixture
         user=user
@@ -364,7 +499,11 @@ class BonosView(APIView):
                     }, status=status.HTTP_201_CREATED)
         else:
             return Response({"error": "No hay suficientes bonos disponibles"}, status=status.HTTP_400_BAD_REQUEST)
+
+
         
+
+
 
 # mqtt/requests
 class BonusRequestView(APIView):
