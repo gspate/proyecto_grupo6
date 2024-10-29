@@ -22,7 +22,7 @@ from transbank.webpay.webpay_plus.transaction import Transaction
 from transbank.common.options import WebpayOptions
 from transbank.common.integration_type import IntegrationType
 from transbank.common.integration_commerce_codes import IntegrationCommerceCodes
-import logging
+
 
 # Configuración del broker MQTT
 MQTT_HOST = 'broker.iic2173.org'  # Dirección del broker
@@ -276,16 +276,15 @@ class BonosView(APIView):
                         "league_name": fixture.league_name,
                         "round": fixture.league_round,
                         "date": fixture.date,
-                        "result": request_data.get('result'),
-                        "depostit_token": resp.token,
+                        "result": result,
+                        "deposit_token": resp.token,
                         "datetime": timezone.now(),
                         "quantity": quantity,
-                        "wallet": request_data.get('wallet'),
+                        "wallet": method,
                         "seller": 0
                     }
                 except Exception as e:
-                    
-                    return Response({"error": f"Problema TBK 2{e.message}"}, status=status.HTTP_400_BAD_REQUEST)
+                    return Response({"error": f"Problema TBK 2 {e}"}, status=status.HTTP_400_BAD_REQUEST)
 
                 # Convertir el diccionario a una cadena JSON
                 try:
@@ -372,7 +371,7 @@ class BonosView(APIView):
                 "round": fixture.league_round,
                 "date": fixture.date,
                 "result": request_data.get('result'),
-                "depostit_token": f"{token}",
+                "deposit_token": f"{token}",
                 "datetime": timezone.now(),
                 "quantity": quantity,
                 "wallet": request_data.get('wallet'),
