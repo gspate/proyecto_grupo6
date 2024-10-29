@@ -32,8 +32,6 @@ MQTT_PASSWORD = 'iic2173-2024-2-students'  # Contraseña
 
 #tx = Transaction(WebpayOptions(IntegrationCommerceCodes.WEBPAY_PLUS, IntegrationApiKeys.WEBPAY, IntegrationType.TEST))
 
-
-
 # /users
 class UserView(APIView):
     """
@@ -90,7 +88,6 @@ class UserDetailView(APIView):
 
 
 class addwallet(APIView):
-
     def patch(self,request, **kwargs):
         request_data = request.data
         user_id = request_data.get('user')
@@ -118,6 +115,7 @@ class addwallet(APIView):
 
         except Exception as e:
             return Response({"error": "Error al actualizar la wallet"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 # /fixtures
 class FixtureList(APIView):
@@ -156,9 +154,8 @@ class FixtureList(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 # /fixtures/<fixture_id>
-
-
 class FixtureDetail(APIView):
     """
     Vista para obtener (GET) o actualizar (PUT) un fixture específico.
@@ -200,7 +197,6 @@ class BonosView(APIView):
 
 class AskTransbank(APIView):
     pass
-
 
 class BonosView(APIView):
 
