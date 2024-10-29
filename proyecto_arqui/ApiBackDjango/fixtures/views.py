@@ -464,24 +464,23 @@ class VerificarEstadoTransaccion(APIView):
                 return Response({"message": "request id no reconocido :C"}, status=status.HTTP_404_NOT_FOUND)
                 
             # Verifica el estado de la transacción
-            if response.status == "AUTHORIZED":
+            if response['status'] == "AUTHORIZED":
                 # Procesa la transacción como exitosa
-                
-                
-                
-                
                 return Response({
                     "message": "Pago exitoso",
-                    "buy_order": response.buy_order,
-                    "amount": response.amount,
-                    "transaction_date": response.transaction_date,
-                    "card_detail": response.card_detail,
-                    "status": response.status
+                    "buy_order": response['buy_order'],  # Acceso como clave de diccionario
+                    "amount": response['amount'],        # Acceso como clave de diccionario
+                    "transaction_date": response['transaction_date'],  # Acceso como clave de diccionario
+                    "card_detail": response['card_detail'],  # Acceso como clave de diccionario
+                    "status": response['status']  # Acceso como clave de diccionario
                 }, status=status.HTTP_200_OK)
-                
+
             else:
                 # Si la transacción no es exitosa, devuelve el estado específico
-                return Response({"message": "La transacción no fue exitosa", "status": response.status}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({
+                    "message": "La transacción no fue exitosa",
+                    "status": response['status']  # Acceso como clave de diccionario
+                }, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
             # Manejo de errores en caso de que falle la confirmación
