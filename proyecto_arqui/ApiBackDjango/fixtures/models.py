@@ -62,7 +62,7 @@ class Bonos(models.Model):
     deposit_token = models.CharField(max_length=100, blank=True, null=True)
     datetime = models.CharField(max_length=100, blank=True, null=True)
     wallet = models.BooleanField()
-    acierto = models.BooleanField(defalu=False)
+    acierto = models.BooleanField(default=False)
     seller = models.IntegerField(default=0)
     status = models.CharField(max_length=10, choices=ESTADOS_BONO, default='pendiente')
 
