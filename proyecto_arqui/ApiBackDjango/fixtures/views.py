@@ -284,8 +284,8 @@ class BonosView(APIView):
                         "seller": 0
                     }
                 except Exception as e:
-                    logging.log(e)
-                    return Response({"error": "Problema TBK 2"}, status=status.HTTP_400_BAD_REQUEST)
+                    
+                    return Response({"error": f"Problema TBK 2{e.message}"}, status=status.HTTP_400_BAD_REQUEST)
 
                 # Convertir el diccionario a una cadena JSON
                 try:
