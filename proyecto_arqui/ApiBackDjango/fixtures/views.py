@@ -705,3 +705,21 @@ class StoreRecommendationView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+class UserRecommendationsView(APIView):
+    def get(self, request, user_id, *args, **kwargs):
+        # Filtra las recomendaciones por el user_id especificado y ordena por benefit_score en orden descendente
+        recommendations = Recommendation.objects.filter(user_id=user_id).order_by('-benefit_score')
+
+        # Si no se encuentran recomendaciones, devuelve un mensaje informativo
+        if not recommendations.exists():
+            return Response({"message": "No hay recomendaciones para este usuario."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Obtiene los fixtures asociados con las recomendaciones en el orden de benefit_score
+        fixture_ids = recommendations.values_list('fixture_id', flat=True)
+        fixtures = Fixture.objects.filter(fixture_id__in=fixture_ids)
+
+        # Serializa los fixtures encontrados
+        serializer = FixtureSerializer(fixtures, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
