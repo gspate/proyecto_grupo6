@@ -233,7 +233,7 @@ class BonosView(APIView):
                             ))
 
                             # Crea la transacción y obtiene el token y la URL
-                    resp = tx.create(fixture.fixture_id, session_id, total_cost, "https://web.arqui-2024-gspate.me/confirmTBK")
+                    resp = tx.create(fixture.fixture_id, session_id, total_cost, "https://web.arqui-2024-gspate.me/")
                     token = resp.get("token")
                     url = resp.get("url")
                 except:
