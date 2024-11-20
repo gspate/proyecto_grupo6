@@ -440,7 +440,7 @@ class VerificarEstadoTransaccion(APIView):
             # Confirma la transacción con Webpay usando el token_ws
             response = Transaction.commit(token_ws)
 
-            request_id_cut = response['buy_order']
+            request_id_cut = response['buy_order'] #ESTO QUEDA EN DUDA ###################################################################################################################
             try:
                 bono_object = Bonos.objects.filter(request_id__startswith=request_id_cut).first()
             except:
