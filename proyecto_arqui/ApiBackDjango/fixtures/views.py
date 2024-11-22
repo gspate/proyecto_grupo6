@@ -251,7 +251,8 @@ class BonosView(APIView):
 
                 # Generar un UUIDv6 para el request_id
                 
-            
+                if Bonos.objects.filter(request_id=request_id).exists():
+                    return Response({"detail": "Request ID already exists."}, status=status.HTTP_400_BAD_REQUEST)
                 try:
                     bonus_request = Bonos.objects.create(
                     request_id=request_id,
@@ -347,7 +348,7 @@ class BonosView(APIView):
                 request_id = uuid6.uuid6()
             except:
                 return Response({"error": "uuid6 failed"}, status=status.HTTP_400_BAD_REQUEST)
-
+            
             # Crear la solicitud de bono
             bonus_request = Bonos.objects.create(
                 request_id=request_id,

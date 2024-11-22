@@ -13,8 +13,10 @@ Class-based views
 Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
+    
 """
-from django.urls import path
+
+from django.urls import path, include
 from fixtures.views import FixtureList, FixtureDetail, BonusRequestView, BonusValidationView, BonosView, BonusHistoryView, UserView, UserDetailView, addwallet, StoreRecommendationView, UserPurchasesView, UserRecommendationsView, VerificarEstadoTransaccion
 
 # VerificarEstadoTransaccion
@@ -45,4 +47,7 @@ urlpatterns = [
 
     # TransbankConfirm
     path('confirmTBK',VerificarEstadoTransaccion.as_view(), name= "TBK_confirm"),
+
+    path('', include('django_prometheus.urls')),
+    path('metrics/', include('django_prometheus.urls')),
 ]
