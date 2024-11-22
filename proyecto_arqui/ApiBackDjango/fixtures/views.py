@@ -22,6 +22,9 @@ from transbank.webpay.webpay_plus.transaction import Transaction
 from transbank.common.options import WebpayOptions
 from transbank.common.integration_type import IntegrationType
 from transbank.common.integration_commerce_codes import IntegrationCommerceCodes
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 
 # Configuración del broker MQTT
@@ -30,8 +33,64 @@ MQTT_PORT = 9000                  # Puerto del broker
 MQTT_USER = 'students'            # Usuario
 MQTT_PASSWORD = 'iic2173-2024-2-students'  # Contraseña
 
+LAMBDA_URL = 'https://nfu5ofywqc.execute-api.us-east-1.amazonaws.com/dev/pdf'
+
 #tx = Transaction(WebpayOptions(IntegrationCommerceCodes.WEBPAY_PLUS, IntegrationApiKeys.WEBPAY, IntegrationType.TEST))
 
+# Función para hacer las llamadas a Lambda (generar boletas) y enviarlas al correo del usuario
+def GenerateAndSendPdfToUserEmail(fixture, user):
+    payload = {
+        "groupName": "Grupo 6",
+        "userName": user.username,
+        "teamsInfo": [fixture.home_team_name, fixture.away_team_name],
+    }
+
+    try:
+        result = requests.post(LAMBDA_URL, json=payload)
+        if result.status_code == 200:
+            print("PDF generado exitosamente")
+            pdf_link = result.json().get("url")
+            try:
+                send_email_with_pdf_link(pdf_link, user.email)
+            except Exception as e:
+                print(f"Error al enviar el correo: {e}")
+        else:
+            print("Error al generar el PDF")
+    except Exception as e:
+        print(f"Error al llamar a la función Lambda: {e}")
+    
+def send_email_with_pdf_link(pdf_link, recipient_email):
+    # Configuración del servidor SMTP
+    smtp_server = "smtp.outlook.com"  # Cambia según tu proveedor (e.g., smtp.outlook.com para Outlook)
+    smtp_port = 587  # Puerto para TLS
+    sender_email = "grupo6_arquisoftware@outlook.com"  # Cambia por tu correo
+    sender_password = "Nomegustaarqui2024"  # Contraseña del correo o App Password si usas Gmail
+
+    try:
+        # Crear el mensaje de correo
+        subject = "Tu PDF generado está listo"
+        body = f"Hola,\n\nTu PDF está listo. Puedes descargarlo usando el siguiente enlace:\n\n{pdf_link}\n\nSaludos cordiales."
+        
+        # Configuración del correo
+        message = MIMEMultipart()
+        message["From"] = sender_email
+        message["To"] = recipient_email
+        message["Subject"] = subject
+
+        # Agregar el cuerpo al correo
+        message.attach(MIMEText(body, "plain"))
+
+        # Conectar al servidor SMTP y enviar el correo
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()  # Iniciar cifrado TLS
+            server.login(sender_email, sender_password)  # Autenticación
+            server.sendmail(sender_email, recipient_email, message.as_string())  # Enviar correo
+
+        print(f"Correo enviado exitosamente a {recipient_email}")
+
+    except Exception as e:
+        print(f"Error al enviar el correo: {str(e)}")
+    
 # /users
 class UserView(APIView):
     """
@@ -220,6 +279,10 @@ class BonosView(APIView):
                 return Response({"error": "Fondos insuficientes"}, status=status.HTTP_400_BAD_REQUEST)
 
             # Descontar el dinero de la billetera del usuario
+            try:
+                GenerateAndSendPdfToUserEmail(fixture, user)
+            except:
+                return Response({"error": "Problema al enviar el correo"}, status=status.HTTP_400_BAD_REQUEST)
             user.wallet -= total_cost
             user.save()
 
@@ -319,16 +382,17 @@ class BonosView(APIView):
                             "message": "Bonos comprados exitosamente, dinero descontado exitosamente y recomendaciones generadas", "token": token, "url": url
                         }, status=status.HTTP_201_CREATED)
                     else:
+
                         return Response({
                             "request_id": str(bonus_request.request_id),
                             "message": "Bonos comprados y dinero descontado exitosamente, pero recomendacion no generada", "token": token, "url": url
                         }, status=status.HTTP_201_CREATED)
+                    
                 except Exception as e:
                     return Response({
                             "request_id": str(bonus_request.request_id),
                             "message": "Bonos comprados y dinero descontado exitosamente, pero recomendacion no generada", "token": token, "url": url
                         }, status=status.HTTP_201_CREATED)
-
                 
 
             except Exception as e:
@@ -404,17 +468,29 @@ class BonosView(APIView):
                 response = requests.post(job_master_url, json=data)
 
                 if response.status_code == 200:
+                    try:
+                        GenerateAndSendPdfToUserEmail(fixture, user)
+                    except:
+                        return Response({"error": "Problema al enviar el correo"}, status=status.HTTP_400_BAD_REQUEST)
                     return Response({
                         "request_id": str(bonus_request.request_id),
                         "message": "Bonos comprados exitosamente, dinero descontado exitosamente y recomendaciones generadas"
                     }, status=status.HTTP_201_CREATED)
                 else:
+                    try:
+                        GenerateAndSendPdfToUserEmail(fixture, user)
+                    except:
+                        return Response({"error": "Problema al enviar el correo"}, status=status.HTTP_400_BAD_REQUEST)
                     return Response({
                         "request_id": str(bonus_request.request_id),
                         "message": "Bonos comprados y dinero descontado exitosamente, pero recomendacion no generada"
                     }, status=status.HTTP_201_CREATED)
             except Exception as e:
-                 return Response({
+                try:
+                    GenerateAndSendPdfToUserEmail(fixture, user)
+                except:
+                    return Response({"error": "Problema al enviar el correo"}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({
                         "request_id": str(bonus_request.request_id),
                         "message": "Bonos comprados y dinero descontado exitosamente, pero recomendacion no generada"
                     }, status=status.HTTP_201_CREATED)
