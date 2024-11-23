@@ -249,7 +249,7 @@ class BonosView(APIView):
                     fixture.available_bonuses -= quantity
                     fixture.save()
 
-                # Generar un UUIDv6 para el request_id
+                
                 
                 if Bonos.objects.filter(request_id=request_id).exists():
                     return Response({"detail": "Request ID already exists."}, status=status.HTTP_400_BAD_REQUEST)
