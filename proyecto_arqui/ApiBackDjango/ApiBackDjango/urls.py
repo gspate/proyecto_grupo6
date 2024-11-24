@@ -16,8 +16,8 @@ Including another URLconf
     
 """
 
-from django.urls import path, include
-from fixtures.views import FixtureList, FixtureDetail, BonusRequestView, BonusValidationView, BonosView, BonusHistoryView, UserView, UserDetailView, addwallet, StoreRecommendationView, UserPurchasesView, UserRecommendationsView, VerificarEstadoTransaccion
+from django.urls import path
+from fixtures.views import FixtureList, FixtureDetail, BonusRequestView, BonusValidationView, BonosView, BonusHistoryView, UserView, UserDetailView, addwallet, StoreRecommendationView, UserPurchasesView, UserRecommendationsView, VerificarEstadoTransaccion, WorkersView, ReserveBonos, BuyBonos, AdminView
 
 # VerificarEstadoTransaccion
 
@@ -39,15 +39,20 @@ urlpatterns = [
     path('bonos', BonosView.as_view(), name='bonos_list'),
     path('bonos/<str:requests_id>', BonosView.as_view(), name='bonos_list'), 
     path('wallet/add', addwallet.as_view(), name='add_funds'),
+    path('bonos_reserved', BuyBonos.as_view(), name='buy_bonos'),
 
     # Recomendaciones
     path("store_recommendation", StoreRecommendationView.as_view(), name="store_recommendation"),
     path("user_purchases/<str:user_id>", UserPurchasesView.as_view(), name="user_purchases"),
     path("user_recommendations/<str:user_id>", UserRecommendationsView.as_view(), name="user_recommendations"),
+    path("heartbeat", WorkersView.as_view(), name="heartbeat"),
 
     # TransbankConfirm
     path('confirmTBK',VerificarEstadoTransaccion.as_view(), name= "TBK_confirm"),
 
+    # Admin
+    path('reserve_bonos', ReserveBonos.as_view(), name='reserve_bonos'),
+    path('admin', AdminView.as_view(), name='admin'),
     path('', include('django_prometheus.urls')),
     path('metrics/', include('django_prometheus.urls')),
 ]

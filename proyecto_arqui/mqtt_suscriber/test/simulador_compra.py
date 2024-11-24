@@ -76,7 +76,7 @@ def send_existing_bonus_request():
     # Datos de la solicitud proporcionados
     message = {
         "request_id": "f1d5a24e-4bd9-4ac7-b401-0be8f5e8cc5e",
-        "group_id": "24",
+        "group_id": "6",
         "fixture_id": 1208578,
         "league_name": "UEFA Champions|League",
         "round": "Group Stage - 10",
@@ -86,7 +86,7 @@ def send_existing_bonus_request():
         "datetime": "2024-10-14T20:32:35.859Z",
         "quantity": 2,
         "wallet": True,
-        "seller": 0
+        "seller": 6
     }
 
     # Enviar la solicitud al canal MQTT

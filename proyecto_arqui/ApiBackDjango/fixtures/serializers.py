@@ -19,7 +19,7 @@ class BonosSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['user_id', 'username', 'email', 'first_name', 'last_name', 'wallet']
+        fields = ['user_id', 'username', 'email', 'first_name', 'last_name', 'wallet', 'is_admin']
 
 
 class RecommendationSerializer(serializers.ModelSerializer):
