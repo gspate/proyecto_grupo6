@@ -15,7 +15,7 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.urls import path
-from fixtures.views import FixtureList, FixtureDetail, BonusRequestView, BonusValidationView, BonosView, BonusHistoryView, UserView, UserDetailView, addwallet, StoreRecommendationView, UserPurchasesView, UserRecommendationsView, VerificarEstadoTransaccion, WorkersView, ReserveBonos, BuyBonos
+from fixtures.views import FixtureList, FixtureDetail, BonusRequestView, BonusValidationView, BonosView, BonusHistoryView, UserView, UserDetailView, addwallet, StoreRecommendationView, UserPurchasesView, UserRecommendationsView, VerificarEstadoTransaccion, WorkersView, ReserveBonos, BuyBonos, AdminView
 
 # VerificarEstadoTransaccion
 
@@ -49,5 +49,6 @@ urlpatterns = [
     path('confirmTBK',VerificarEstadoTransaccion.as_view(), name= "TBK_confirm"),
 
     # Admin
-    path('reserve_bonos', ReserveBonos.as_view(), name='reserve_bonos')
+    path('reserve_bonos', ReserveBonos.as_view(), name='reserve_bonos'),
+    path('admin', AdminView.as_view(), name='admin'),
 ]

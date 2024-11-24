@@ -62,6 +62,22 @@ class UserView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+class AdminView(APIView):
+    
+    def get(self, request, user_id, *args, **kwargs):
+        """
+        Verifica si un usuario es administrador.
+        Este endpoint espera que user_id se pase como parámetro en la URL.
+        """
+        try:
+            # Busca al usuario por user_id
+            user = User.objects.get(user_id=user_id)
+            return Response({"is_admin": user.is_admin}, status=status.HTTP_200_OK)
+        except User.DoesNotExist:
+            # Si el usuario no existe, responde con is_admin=False
+            return Response({"is_admin": False, "error": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND)
 
 
 # /users/<user_id>
