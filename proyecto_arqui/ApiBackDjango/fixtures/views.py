@@ -249,9 +249,10 @@ class BonosView(APIView):
                     fixture.available_bonuses -= quantity
                     fixture.save()
 
-                # Generar un UUIDv6 para el request_id
                 
-            
+                
+                if Bonos.objects.filter(request_id=request_id).exists():
+                    return Response({"detail": "Request ID already exists."}, status=status.HTTP_400_BAD_REQUEST)
                 try:
                     bonus_request = Bonos.objects.create(
                     request_id=request_id,
@@ -347,7 +348,7 @@ class BonosView(APIView):
                 request_id = uuid6.uuid6()
             except:
                 return Response({"error": "uuid6 failed"}, status=status.HTTP_400_BAD_REQUEST)
-
+            
             # Crear la solicitud de bono
             bonus_request = Bonos.objects.create(
                 request_id=request_id,
@@ -440,7 +441,7 @@ class VerificarEstadoTransaccion(APIView):
             # Confirma la transacción con Webpay usando el token_ws
             response = Transaction.commit(token_ws)
 
-            request_id_cut = response['buy_order']
+            request_id_cut = response['buy_order'] #ESTO QUEDA EN DUDA ###################################################################################################################
             try:
                 bono_object = Bonos.objects.filter(request_id__startswith=request_id_cut).first()
             except:
