@@ -41,7 +41,7 @@ class UserView(APIView):
     """
 
     # Lista de correos electrónicos de administradores
-    ADMIN_EMAILS = ["alvaro.sotomayor@uc.cl", "admin@example.com"]
+    ADMIN_EMAILS = ["alvaro.sotomayor@uc.cl", "admin@g6.com", "pascual.seplveda@uc.cl"]
 
     # GET: Obtener la lista de todos los usuarios
     def get(self, request, *args, **kwargs):

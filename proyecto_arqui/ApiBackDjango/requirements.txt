@@ -27,3 +27,4 @@ requests
 transbank-sdk
 sqlalchemy
 datetime
+django_prometheus

@@ -16,7 +16,7 @@ Including another URLconf
     
 """
 
-from django.urls import path
+from django.urls import path, include
 from fixtures.views import FixtureList, FixtureDetail, BonusRequestView, BonusValidationView, BonosView, BonusHistoryView, UserView, UserDetailView, addwallet, StoreRecommendationView, UserPurchasesView, UserRecommendationsView, VerificarEstadoTransaccion, WorkersView, ReserveBonos, BuyBonos, AdminView
 
 # VerificarEstadoTransaccion
