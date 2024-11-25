@@ -701,7 +701,7 @@ class VerificarEstadoTransaccion(APIView):
                 json_data = json.dumps(data, default=str)
             except:
                 return Response({"message": "Problema con data json dump"}, status=status.HTTP_404_NOT_FOUND)
-                
+
             # Verifica el estado de la transacción
             if response['response_code'] == 0:
                 try:
@@ -714,7 +714,7 @@ class VerificarEstadoTransaccion(APIView):
                     )
                 except:
                     return Response({"message": "problema con publish"}, status=status.HTTP_400_BAD_REQUEST)
-                
+
                 return Response({
                     "message": "Pago exitoso",
                     "buy_order": response['buy_order'],  # Acceso como clave de diccionario
@@ -740,9 +740,29 @@ class VerificarEstadoTransaccion(APIView):
 class WorkersView(APIView):
     def get(self, request, *args, **kwargs):
         job_master_url = "http://producer:5000/heartbeat"
-        response = requests.get(job_master_url)
-        return Response(response.json())
-        
+        try:
+            response = requests.get(job_master_url, timeout=5)  # Añade un timeout
+            response.raise_for_status()  # Lanza un error si el código HTTP no es 2xx
+
+            # Intenta procesar el JSON
+            try:
+                data = response.json()
+            except ValueError:
+                return Response(
+                    {"error": "La respuesta del servidor no es un JSON válido"},
+                    status=500,
+                )
+
+            # Opcional: Estandarizar la respuesta
+            return Response({"status": "success", "data": data}, status=200)
+
+        except requests.exceptions.RequestException as e:
+            # Manejar errores de conexión o tiempo de espera
+            return Response(
+                {"error": f"No se pudo conectar con el servidor: {str(e)}"},
+                status=500,
+            )
+
 
 # mqtt/requests
 class BonusRequestView(APIView):
@@ -807,7 +827,7 @@ class BonusRequestView(APIView):
                     "message": "Bonos reservados temporalmente"
                 }, status=status.HTTP_201_CREATED)
             
-            except IntegrityError:
+            except Exception:
                 # Revertir el cambio en los bonos disponibles si hay un error
                 fixture.available_bonuses += quantity
                 fixture.save()
@@ -973,8 +993,8 @@ class StoreRecommendationView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    
+
+
 class UserRecommendationsView(APIView):
     def get(self, request, user_id, *args, **kwargs):
         # Filtra las recomendaciones por el user_id especificado y ordena por benefit_score en orden descendente

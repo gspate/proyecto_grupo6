@@ -52,7 +52,7 @@ urlpatterns = [
 
     # Admin
     path('reserve_bonos', ReserveBonos.as_view(), name='reserve_bonos'),
-    path('admin', AdminView.as_view(), name='admin'),
+    path('admin/<str:user_id>', AdminView.as_view(), name='admin'),
     path('', include('django_prometheus.urls')),
     path('metrics/', include('django_prometheus.urls')),
 ]
