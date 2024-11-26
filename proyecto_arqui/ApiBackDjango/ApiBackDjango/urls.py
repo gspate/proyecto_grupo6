@@ -16,7 +16,7 @@ Including another URLconf
     
 """
 
-from django.urls import path
+from django.urls import path, include
 from fixtures.views import FixtureList, FixtureDetail, BonusRequestView, BonusValidationView, BonosView, BonusHistoryView, UserView, UserDetailView, addwallet, StoreRecommendationView, UserPurchasesView, UserRecommendationsView, VerificarEstadoTransaccion, WorkersView, ReserveBonos, BuyBonos, AdminView
 
 # VerificarEstadoTransaccion
@@ -52,7 +52,7 @@ urlpatterns = [
 
     # Admin
     path('reserve_bonos', ReserveBonos.as_view(), name='reserve_bonos'),
-    path('admin', AdminView.as_view(), name='admin'),
+    path('admin/<str:user_id>', AdminView.as_view(), name='admin'),
     path('', include('django_prometheus.urls')),
     path('metrics/', include('django_prometheus.urls')),
 ]
