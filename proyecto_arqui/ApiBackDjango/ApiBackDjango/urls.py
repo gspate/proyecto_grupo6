@@ -17,7 +17,7 @@ Including another URLconf
 """
 
 from django.urls import path, include
-from fixtures.views import FixtureList, FixtureDetail, BonusRequestView, BonusValidationView, BonosView, BonusHistoryView, UserView, UserDetailView, addwallet, StoreRecommendationView, UserPurchasesView, UserRecommendationsView, VerificarEstadoTransaccion, WorkersView, ReserveBonos, BuyBonos, AdminView, AuctionsView, AuctionsListView, GroupProposalsView, OfferBonosView, SendProposalView
+from fixtures.views import FixtureList, FixtureDetail, BonusRequestView, BonusValidationView, BonosView, BonusHistoryView, UserView, UserDetailView, addwallet, StoreRecommendationView, UserPurchasesView, UserRecommendationsView, VerificarEstadoTransaccion, WorkersView, ReserveBonos, BuyBonos, AdminView, AuctionsView, AuctionsListView, GroupProposalsView, OfferBonosView, SendProposalView, ProposalResponseView
 
 # VerificarEstadoTransaccion
 
@@ -58,6 +58,7 @@ urlpatterns = [
     path('metrics/', include('django_prometheus.urls')),
     path('auctions_offers/', AuctionsListView.as_view(), name='auctions-list'),
     path('auctions_proposals/', GroupProposalsView.as_view(), name='group-proposals'),
-    path('send_offer/', OfferBonosView.as_view(), name='offer-bonos'),
-    path('send_proposal/', SendProposalView.as_view(), name='send-proposal'),
+    path('send_offer', OfferBonosView.as_view(), name='offer-bonos'),
+    path('send_proposal', SendProposalView.as_view(), name='send-proposal'),
+    path('proposal_response', ProposalResponseView.as_view(), name='proposal-response'),
 ]
