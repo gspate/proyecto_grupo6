@@ -9,8 +9,9 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.utils.timezone import now
 from django.views import View
-from .models import Fixture, Bonos, User, Recommendation
-from .serializers import FixtureSerializer, BonosSerializer, UserSerializer, RecommendationSerializer
+from django.db.models import Sum
+from .models import Fixture, Bonos, User, Recommendation, Auctions
+from .serializers import FixtureSerializer, BonosSerializer, UserSerializer, RecommendationSerializer, AuctionsSerializer
 from django.utils import timezone
 import json
 from datetime import datetime
@@ -23,17 +24,77 @@ from transbank.webpay.webpay_plus.transaction import Transaction
 from transbank.common.options import WebpayOptions
 from transbank.common.integration_type import IntegrationType
 from transbank.common.integration_commerce_codes import IntegrationCommerceCodes
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 
 # Configuración del broker MQTT
 MQTT_HOST = "broker.iic2173.org"
 MQTT_PORT = 9000
 MQTT_TOPIC = "fixtures/requests"
+MQTT_AUC = "fixtures/auctions"
 MQTT_USER = "students"
 MQTT_PASSWORD = "iic2173-2024-2-students"
 
+LAMBDA_URL = 'https://nfu5ofywqc.execute-api.us-east-1.amazonaws.com/dev/pdf'
+
 #tx = Transaction(WebpayOptions(IntegrationCommerceCodes.WEBPAY_PLUS, IntegrationApiKeys.WEBPAY, IntegrationType.TEST))
 
+# Función para hacer las llamadas a Lambda (generar boletas) y enviarlas al correo del usuario
+def GenerateAndSendPdfToUserEmail(fixture, user):
+    payload = {
+        "groupName": "Grupo 6",
+        "userName": user.username,
+        "teamsInfo": [fixture.home_team_name, fixture.away_team_name],
+    }
+
+    try:
+        result = requests.post(LAMBDA_URL, json=payload)
+        if result.status_code == 200:
+            print("PDF generado exitosamente")
+            pdf_link = result.json().get("url")
+            try:
+                send_email_with_pdf_link(pdf_link, user.email)
+            except Exception as e:
+                print(f"Error al enviar el correo: {e}")
+        else:
+            print("Error al generar el PDF")
+    except Exception as e:
+        print(f"Error al llamar a la función Lambda: {e}")
+    
+def send_email_with_pdf_link(pdf_link, recipient_email):
+    # Configuración del servidor SMTP
+    smtp_server = "smtp.outlook.com"  # Cambia según tu proveedor (e.g., smtp.outlook.com para Outlook)
+    smtp_port = 587  # Puerto para TLS
+    sender_email = "grupo6_arquisoftware@outlook.com"  # Cambia por tu correo
+    sender_password = "Nomegustaarqui2024"  # Contraseña del correo o App Password si usas Gmail
+
+    try:
+        # Crear el mensaje de correo
+        subject = "Tu PDF generado está listo"
+        body = f"Hola,\n\nTu PDF está listo. Puedes descargarlo usando el siguiente enlace:\n\n{pdf_link}\n\nSaludos cordiales."
+        
+        # Configuración del correo
+        message = MIMEMultipart()
+        message["From"] = sender_email
+        message["To"] = recipient_email
+        message["Subject"] = subject
+
+        # Agregar el cuerpo al correo
+        message.attach(MIMEText(body, "plain"))
+
+        # Conectar al servidor SMTP y enviar el correo
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()  # Iniciar cifrado TLS
+            server.login(sender_email, sender_password)  # Autenticación
+            server.sendmail(sender_email, recipient_email, message.as_string())  # Enviar correo
+
+        print(f"Correo enviado exitosamente a {recipient_email}")
+
+    except Exception as e:
+        print(f"Error al enviar el correo: {str(e)}")
+    
 # /users
 class UserView(APIView):
     """
@@ -349,6 +410,7 @@ class ReserveBonos(APIView):
         fixture_id_request = request_data.get('fixture_id')
         user_id = request_data.get('user_id')  # Asumiendo que se pasa el user_id en la request
         quantity = int(request_data.get('quantity', 0))  # Cantidad de bonos solicitados
+        result = request_data.get('result')
 
         try:
             fixture = Fixture.objects.get(fixture_id=fixture_id_request)
@@ -381,6 +443,7 @@ class ReserveBonos(APIView):
             round=fixture.league_round,
             datetime=timezone.now(),
             date=fixture.date,
+            result=result,
             seller=6,
             wallet=False,
             acierto=False
@@ -395,11 +458,11 @@ class ReserveBonos(APIView):
             "league_name": fixture.league_name,
             "round": fixture.league_round,
             "date": fixture.date,
-            "result": request_data.get('result'),
+            "result": result,
             "deposit_token": f"{token}",
             "datetime": timezone.now(),
             "quantity": quantity,
-            "wallet": request_data.get('wallet'),
+            "wallet": bonus_request.wallet,
             "seller": 6
         }
 
@@ -463,6 +526,10 @@ class BonosView(APIView):
                 return Response({"error": "Fondos insuficientes"}, status=status.HTTP_400_BAD_REQUEST)
 
             # Descontar el dinero de la billetera del usuario
+            try:
+                GenerateAndSendPdfToUserEmail(fixture, user)
+            except:
+                return Response({"error": "Problema al enviar el correo"}, status=status.HTTP_400_BAD_REQUEST)
             user.wallet -= total_cost
             user.save()
 
@@ -565,16 +632,17 @@ class BonosView(APIView):
                             "message": "Bonos comprados exitosamente, dinero descontado exitosamente y recomendaciones generadas", "token": token, "url": url
                         }, status=status.HTTP_201_CREATED)
                     else:
+
                         return Response({
                             "request_id": str(bonus_request.request_id),
                             "message": "Bonos comprados y dinero descontado exitosamente, pero recomendacion no generada", "token": token, "url": url
                         }, status=status.HTTP_201_CREATED)
+                    
                 except Exception as e:
                     return Response({
                             "request_id": str(bonus_request.request_id),
                             "message": "Bonos comprados y dinero descontado exitosamente, pero recomendacion no generada", "token": token, "url": url
                         }, status=status.HTTP_201_CREATED)
-
                 
 
             except Exception as e:
@@ -650,17 +718,29 @@ class BonosView(APIView):
                 response = requests.post(job_master_url, json=data)
 
                 if response.status_code == 200:
+                    try:
+                        GenerateAndSendPdfToUserEmail(fixture, user)
+                    except:
+                        return Response({"error": "Problema al enviar el correo"}, status=status.HTTP_400_BAD_REQUEST)
                     return Response({
                         "request_id": str(bonus_request.request_id),
                         "message": "Bonos comprados exitosamente, dinero descontado exitosamente y recomendaciones generadas"
                     }, status=status.HTTP_201_CREATED)
                 else:
+                    try:
+                        GenerateAndSendPdfToUserEmail(fixture, user)
+                    except:
+                        return Response({"error": "Problema al enviar el correo"}, status=status.HTTP_400_BAD_REQUEST)
                     return Response({
                         "request_id": str(bonus_request.request_id),
                         "message": "Bonos comprados y dinero descontado exitosamente, pero recomendacion no generada"
                     }, status=status.HTTP_201_CREATED)
             except Exception as e:
-                 return Response({
+                try:
+                    GenerateAndSendPdfToUserEmail(fixture, user)
+                except:
+                    return Response({"error": "Problema al enviar el correo"}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({
                         "request_id": str(bonus_request.request_id),
                         "message": "Bonos comprados y dinero descontado exitosamente, pero recomendacion no generada"
                     }, status=status.HTTP_201_CREATED)
@@ -977,8 +1057,631 @@ class BonusHistoryView(APIView):
             "total_fixtures": total_fixtures
         })
 
+# mqtt/auctions
+class AuctionsView(APIView):
+    def post(self, request, *args, **kwargs):
+        # Paso 1: Decodificar el JSON del request
+        data = request.data
+
+        # Validar que los campos obligatorios estén presentes
+        required_fields = [
+            "auction_id", "fixture_id", "league_name", "round", "result",
+            "quantity", "group_id", "type"
+        ]
+        missing_fields = [field for field in required_fields if field not in data]
+        if missing_fields:
+            return Response(
+                {"error": f"Faltan los campos obligatorios: {', '.join(missing_fields)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Validar fixture_id
+        fixture_id_request = data.get("fixture_id")
+        try:
+            fixture_id_request = int(fixture_id_request)
+        except ValueError:
+            return Response(
+                {"error": "El campo 'fixture_id' debe ser un número entero"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            fixture = Fixture.objects.get(fixture_id=fixture_id_request)
+        except Fixture.DoesNotExist:
+            return Response(
+                {"error": "Fixture no encontrado"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Validar y convertir tipos de datos
+        try:
+            quantity = int(data.get("quantity"))
+            group_id = int(data.get("group_id"))
+        except ValueError:
+            return Response(
+                {"error": "Los campos 'quantity' y 'group_id' deben ser números enteros"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Manejo por tipo de operación
+        auction_type = data.get("type")
+
+        if auction_type == "offer":
+            # Validar que no exista una oferta con el mismo auction_id, proposal_id y type
+            auction_id = data.get("auction_id")
+            proposal_id = data.get("proposal_id", "")
+
+            if Auctions.objects.filter(
+                auction_id=auction_id, proposal_id=proposal_id, type=auction_type
+            ).exists():
+                return Response(
+                    {
+                        "error": "Auction con este auction_id, proposal_id y type ya existe.",
+                        "auction_id": auction_id,
+                        "proposal_id": proposal_id,
+                        "type": auction_type,
+                    },
+                    status=status.HTTP_409_CONFLICT,
+                )
+
+            # Crear la subasta
+            try:
+                auction = Auctions.objects.create(
+                    auction_id=auction_id,
+                    proposal_id=proposal_id,
+                    fixture_id=fixture_id_request,
+                    league_name=data.get("league_name"),
+                    round=data.get("round"),
+                    result=data.get("result"),
+                    quantity=quantity,
+                    group_id=group_id,
+                    type=auction_type,
+                )
+                return Response(
+                    {
+                        "auction_id": auction.auction_id,
+                        "message": "Auction created successfully",
+                    },
+                    status=status.HTTP_201_CREATED,
+                )
+            except Exception as e:
+                return Response(
+                    {"error": f"Error al crear la subasta: {str(e)}"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+
+        elif auction_type == "proposal":
+            # Validar condiciones para "proposal"
+            auction_id = data.get("auction_id")
+            existing_auction = Auctions.objects.filter(
+                auction_id=auction_id, group_id=6, type="offer"
+            ).first()
+
+            if not existing_auction:
+                return Response(
+                    {"error": "No se encontró una oferta válida para esta propuesta."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Crear la propuesta
+            try:
+                auction = Auctions.objects.create(
+                    auction_id=auction_id,
+                    proposal_id=data.get("proposal_id", ""),  # Valor por defecto vacío
+                    fixture_id=fixture_id_request,
+                    league_name=data.get("league_name"),
+                    round=data.get("round"),
+                    result=data.get("result"),
+                    quantity=quantity,
+                    group_id=group_id,
+                    type=auction_type,
+                )
+                return Response(
+                    {
+                        "auction_id": auction.auction_id,
+                        "message": "Proposal created successfully",
+                    },
+                    status=status.HTTP_201_CREATED,
+                )
+            except Exception as e:
+                return Response(
+                    {"error": f"Error al crear la propuesta: {str(e)}"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+
+        elif auction_type in ["acceptance", "rejection"]:
+            # Manejo de aceptación o rechazo
+            proposal_id = data.get("proposal_id")
+            auction_id = data.get("auction_id")
+            target_auction = Auctions.objects.filter(
+                auction_id=auction_id
+            ).first()
+
+            if not target_auction:
+                return Response(
+                    {"error": "No se encontró una propuesta válida para esta acción."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            if auction_type == "rejection":
+                # Rechazo: No se hace nada
+                return Response(
+                    {"message": "Propuesta rechazada. No se realizaron cambios."},
+                    status=status.HTTP_200_OK,
+                )
+
+            elif auction_type == "acceptance": ###################### crear bono.
+                # Aceptación: Actualizar el bono
+                try:
+                    bono = Bonos.objects.create(
+                        request_id=str(uuid6.uuid6()),
+                        user_id= "google-oauth2|111781770565762915920",
+                        fixture_id=data.get("fixture_id"),
+                        league_name=data.get("league_name"),
+                        round=data.get("round"),
+                        result=data.get("result"),
+                        quantity=data.get("quantity"),
+                        group_id=6,
+                        seller=6,  # Validar que sea de un admin
+                        wallet=False,
+                    )
+
+                    return Response(
+                        {"message": "Propuesta aceptada. Creacion de reservas."},
+                        status=status.HTTP_200_OK,
+                    )
+                except Exception as e:
+                    return Response(
+                        {"error": f"Error al actualizar el bono: {str(e)}"},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    )
+
+        else:
+            return Response(
+                {"error": "Tipo de operación no válida."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+
+class AuctionsListView(APIView):
+    """
+    Vista para listar todas las subastas (Auctions).
+    """
+    def get(self, request, *args, **kwargs):
+        # Obtener todos los registros de Auctions
+        auctions = Auctions.objects.all()
+        
+        # Serializar los datos
+        serializer = AuctionsSerializer(auctions, many=True)
+        
+        # Retornar la respuesta en formato JSON
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+
+class GroupProposalsView(APIView):
+    """
+    Vista para obtener todas las propuestas (proposals) asociadas al grupo con group_id=6.
+    """
+    def get(self, request, *args, **kwargs):
+        try:
+            # Buscar todas las auctions con group_id=6 y type="proposal"
+            group_auctions = Auctions.objects.filter(type="proposal")
+
+            # Extraer los auction_ids de las auctions del grupo
+            group_auction_ids = group_auctions.values_list("auction_id", flat=True)
+
+            # Buscar las auctions con proposal_id no vacío y cuyo auction_id pertenece al grupo
+            proposals = Auctions.objects.filter(
+                auction_id__in=group_auction_ids,
+                proposal_id__isnull=False,
+                type="proposal"
+            ).exclude(proposal_id="")
+
+            # Serializar las propuestas encontradas
+            serializer = AuctionsSerializer(proposals, many=True)
+
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response(
+                {"error": f"Error al obtener las propuestas del grupo: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+    
+class OfferBonosView(APIView):
+    def post(self, request, *args, **kwargs):
+        # Paso 1: Validar el body de la request
+        required_fields = ["fixture_id", "league_name", "round", "result", "quantity"]
+        data = request.data
+        user_id = data.get("user_id")
+
+        try:
+            user = User.objects.get(user_id=user_id)
+        except User.DoesNotExist:
+            return Response({"error": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Validar si el usuario es administrador
+        if not user.is_admin:
+            return Response({"error": "Usuario no autorizado"}, status=status.HTTP_401_UNAUTHORIZED)
+
+        missing_fields = [field for field in required_fields if field not in data]
+        if missing_fields:
+            return Response(
+                {"error": f"Faltan los campos obligatorios: {', '.join(missing_fields)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        fixture_id = data.get("fixture_id")
+        league_name = data.get("league_name")
+        round_name = data.get("round")
+        result = data.get("result")
+        quantity = int(data.get("quantity", 0))
+
+        # Paso 2: Buscar bonos válidos de administradores
+        try:
+            bono = Bonos.objects.filter(
+                fixture_id=fixture_id,
+                league_name=league_name,
+                round=round_name,
+                result=result,
+                seller=6  # Solo bonos marcados como administradores
+            ).first()
+
+            if not bono:
+                return Response(
+                    {"error": "No se encontraron bonos válidos para la oferta."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+            # Verificar que el bono pertenezca a un administrador
+            user = User.objects.filter(user_id=bono.user_id, is_admin=True).first()
+            if not user:
+                return Response(
+                    {"error": "El bono no pertenece a un administrador."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+            # Verificar si la cantidad solicitada es válida
+            if bono.quantity < quantity:
+                return Response(
+                    {"error": "La cantidad solicitada excede la cantidad disponible en el bono."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        except Exception as e:
+            return Response(
+                {"error": f"Error al buscar bonos: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        # Paso 3: Crear la oferta de subasta
+        auction_id = uuid6.uuid6()
+
+        payload = {
+            "auction_id": str(auction_id),
+            "proposal_id": "",
+            "fixture_id": fixture_id,
+            "league_name": league_name,
+            "round": round_name,
+            "result": result,
+            "quantity": quantity,
+            "group_id": 6,
+            "type": "offer",
+        }
+
+        try:
+            # Publicar el payload en el canal MQTT
+            json_payload = json.dumps(payload)
+            publish.single(
+                topic=MQTT_AUC,
+                payload=json_payload,
+                hostname=MQTT_HOST,
+                port=MQTT_PORT,
+                auth={"username": MQTT_USER, "password": MQTT_PASSWORD},
+            )
+
+            return Response(
+                {"message": "Oferta publicada exitosamente.", "auction_id": str(auction_id)},
+                status=status.HTTP_201_CREATED,
+            )
+        except Exception as e:
+            return Response(
+                {"error": f"Error al publicar en MQTT: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+        
+class SendProposalView(APIView):
+    """
+    Vista para enviar propuestas al canal MQTT fixtures/auctions.
+    """
+
+    def post(self, request, *args, **kwargs):
+        # Datos esperados del frontend
+        required_fields = ["auction_id", "fixture_id", "league_name", "round", "result", "quantity"]
+        data = request.data
+        user_id = data.get("user_id")
+
+        try:
+            user = User.objects.get(user_id=user_id)
+        except User.DoesNotExist:
+            return Response({"error": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Validar si el usuario es administrador
+        if not user.is_admin:
+            return Response({"error": "Usuario no autorizado"}, status=status.HTTP_401_UNAUTHORIZED)
+
+        # Validar campos obligatorios
+        missing_fields = [field for field in required_fields if field not in data]
+        if missing_fields:
+            return Response(
+                {"error": f"Faltan los campos obligatorios: {', '.join(missing_fields)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Validar y extraer datos del request
+        try:
+            auction_id = data["auction_id"]
+            fixture_id = data["fixture_id"]
+            league_name = data["league_name"]
+            round = data["round"]
+            result = data["result"]
+            quantity = int(data["quantity"])
+        except ValueError:
+            return Response(
+                {"error": "Los campos no estan en el formato correcto."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Generar un nuevo proposal_id
+        proposal_id = str(uuid6.uuid6())
+
+        # Validar si existe un auction con el mismo auction_id
+        try:
+            auction = Auctions.objects.get(auction_id=auction_id)
+        except Auctions.DoesNotExist:
+            return Response(
+                {"error": f"No se encontró un auction con auction_id {auction_id}"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Validar si la cantidad no excede la cantidad disponible en el auction original
+        if quantity > auction.quantity:
+            return Response(
+                {"error": "La cantidad solicitada excede la cantidad disponible en el auction."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Crear el payload para enviar al canal MQTT
+        payload = {
+            "auction_id": auction_id,
+            "proposal_id": proposal_id,
+            "fixture_id": fixture_id,
+            "league_name": league_name,
+            "round": round,
+            "result": result,
+            "quantity": quantity,
+            "group_id": 6, 
+            "type": "proposal",
+        }
+
+        try:
+            # Publicar el mensaje en el canal MQTT
+            publish.single(
+                topic=MQTT_AUC,
+                payload=json.dumps(payload),
+                hostname=MQTT_HOST,
+                port=MQTT_PORT,
+                auth={"username": MQTT_USER, "password": MQTT_PASSWORD},
+            )
+            return Response(
+                {"message": "Propuesta enviada exitosamente", "proposal_id": proposal_id},
+                status=status.HTTP_200_OK,
+            )
+
+        except Exception as e:
+            return Response(
+                {"error": f"Error al enviar la propuesta al broker MQTT: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+        
+
+class ProposalResponseView(APIView):
+    """
+    Vista para aceptar o rechazar propuestas en el canal fixtures/auctions.
+    """
+
+    def post(self, request, *args, **kwargs):
+        # Campos requeridos desde el frontend
+        required_fields = [
+            "auction_id", "proposal_id", "fixture_id", "league_name",
+            "round", "result", "quantity", "type"
+        ]
+        data = request.data
+        user_id = data.get("user_id")
+
+        try:
+            user = User.objects.get(user_id=user_id)
+        except User.DoesNotExist:
+            return Response({"error": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Validar si el usuario es administrador
+        if not user.is_admin:
+            return Response({"error": "Usuario no autorizado"}, status=status.HTTP_401_UNAUTHORIZED)
+
+        # Validar que los campos requeridos estén presentes
+        missing_fields = [field for field in required_fields if field not in data]
+        if missing_fields:
+            return Response(
+                {"error": f"Faltan los campos obligatorios: {', '.join(missing_fields)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Validar el tipo de acción
+        action_type = data.get("type")
+        if action_type not in ["acceptance", "rejection"]:
+            return Response(
+                {"error": "El campo 'type' debe ser 'acceptance' o 'rejection'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Si es un rechazo, no se realiza ninguna acción adicional
+        if action_type == "rejection":
+            # Publicar en MQTT que se rechazó la propuesta
+            self.publish_to_mqtt(data, "rejection")
+            return Response(
+                {"message": "Propuesta rechazada exitosamente."},
+                status=status.HTTP_200_OK,
+            )
+
+        # Si es una aceptación, buscar y actualizar los bonos
+        try:
+            # Buscar todos los bonos reservados que coincidan con los detalles y sean de admin
+            bonos = Bonos.objects.filter(
+                fixture_id=data["fixture_id"],
+                league_name=data["league_name"],
+                round=data["round"],
+                result=data["result"],
+                seller=6  # Solo bonos de admin
+            )
+
+            # Verificar si hay suficientes bonos disponibles en total
+            total_quantity = bonos.aggregate(Sum('quantity'))['quantity__sum'] or 0
+            if total_quantity < int(data["quantity"]):
+                return Response(
+                    {"error": "Cantidad insuficiente de bonos para aceptar la propuesta."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Restar la cantidad solicitada de los bonos disponibles
+            quantity_to_deduct = int(data["quantity"])
+            for bono in bonos:
+                if quantity_to_deduct == 0:
+                    break  # Ya se cubrió la cantidad necesaria
+
+                if bono.quantity >= quantity_to_deduct:
+                    bono.quantity -= quantity_to_deduct
+                    bono.save()
+                    quantity_to_deduct = 0
+                else:
+                    quantity_to_deduct -= bono.quantity
+                    bono.quantity = 0
+                    bono.save()
+
+            # Publicar en MQTT que se aceptó la propuesta
+            self.publish_to_mqtt(data, "acceptance")
+
+            return Response(
+                {"message": "Propuesta aceptada exitosamente y bonos actualizados."},
+                status=status.HTTP_200_OK,
+            )
+
+        except Bonos.DoesNotExist:
+            return Response(
+                {"error": "No se encontraron bonos que coincidan con la propuesta."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+    def publish_to_mqtt(self, data, action_type):
+        """
+        Publica la respuesta (aceptación o rechazo) en el canal MQTT.
+        """
+        payload = {
+            "auction_id": data["auction_id"],
+            "proposal_id": data["proposal_id"],
+            "fixture_id": data["fixture_id"],
+            "league_name": data["league_name"],
+            "round": data["round"],
+            "result": data["result"],
+            "quantity": data["quantity"],
+            "group_id": 6,  # Asume que el grupo es el 6
+            "type": action_type
+        }
+
+        try:
+            publish.single(
+                topic=MQTT_AUC,
+                payload=json.dumps(payload),
+                hostname=MQTT_HOST,
+                port=MQTT_PORT,
+                auth={"username": MQTT_USER, "password": MQTT_PASSWORD},
+            )
+        except Exception as e:
+            raise Exception(f"Error al publicar en MQTT: {e}")
+        
+
+class DeleteAuctionView(APIView):
+    """
+    Vista para eliminar una auction específica basada en los campos proporcionados.
+    """
+
+    def delete(self, request, *args, **kwargs):
+        # Campos requeridos desde el frontend
+        required_fields = [
+            "auction_id", "proposal_id", "fixture_id", "league_name",
+            "round", "result", "quantity", "type"
+        ]
+        data = request.data
+        user_id = data.get("user_id")
+
+        try:
+            user = User.objects.get(user_id=user_id)
+        except User.DoesNotExist:
+            return Response({"error": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Validar si el usuario es administrador
+        if not user.is_admin:
+            return Response({"error": "Usuario no autorizado"}, status=status.HTTP_401_UNAUTHORIZED)
+
+        # Validar que los campos requeridos estén presentes
+        missing_fields = [field for field in required_fields if field not in data]
+        if missing_fields:
+            return Response(
+                {"error": f"Faltan los campos obligatorios: {', '.join(missing_fields)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Validar el tipo de auction
+        if data.get("type") != "proposal":
+            return Response(
+                {"error": "El campo 'type' debe ser 'proposal'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            # Buscar y eliminar la auction que coincide con los detalles proporcionados
+            auction = Auctions.objects.filter(
+                auction_id=data["auction_id"],
+                proposal_id=data["proposal_id"],
+                fixture_id=data["fixture_id"],
+                league_name=data["league_name"],
+                round=data["round"],
+                result=data["result"],
+                quantity=data["quantity"],
+                type=data["type"]
+            )
+
+            if not auction.exists():
+                return Response(
+                    {"error": "No se encontró ninguna auction que coincida con los criterios proporcionados."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+            auction.delete()
+
+            return Response(
+                {"message": "Auction eliminada exitosamente."},
+                status=status.HTTP_200_OK,
+            )
+
+        except Exception as e:
+            return Response(
+                {"error": f"Error al eliminar la auction: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
 
 class UserPurchasesView(APIView):
+
     def get(self, request, user_id, *args, **kwargs):
         # Filtrar las compras por usuario
         bonos = Bonos.objects.filter(user_id=user_id)
@@ -1011,3 +1714,5 @@ class UserRecommendationsView(APIView):
         # Serializa los fixtures encontrados
         serializer = FixtureSerializer(fixtures, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+# fix

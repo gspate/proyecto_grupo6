@@ -48,10 +48,20 @@ def calculate_recommendations(user_id, fixture_id):
     if all_fixtures_response.status_code != 200:
         return {"error": "No se pudo obtener la lista de fixtures"}
 
-    all_fixtures = all_fixtures_response.json()
+    try:
+        all_fixtures = all_fixtures_response.json()
+    except ValueError:
+        return {"error": "La respuesta del servidor no es un JSON válido"}
+
+    # Verificar si all_fixtures es una lista o contiene datos
+    if not all_fixtures or not isinstance(all_fixtures, list):
+        return {"error": "No se encontraron fixtures o el formato es incorrecto"}
 
     # Filtrar los próximos partidos de los equipos involucrados
     for fixture in all_fixtures:
+        if not fixture:
+            continue
+
         # Verificar si el partido es de un equipo involucrado y aún no ha comenzado
         if (
             fixture["status_long"] == "Not Started" or fixture["status_short"] == "NS"
@@ -59,10 +69,18 @@ def calculate_recommendations(user_id, fixture_id):
             fixture["home_team_id"] in equipos_involucrados or fixture["away_team_id"] in equipos_involucrados
         ):
             league_name = fixture["league_name"]
-            league_round = int(fixture.get("league_round", "1").split()[-1])
-            odds_home_value = fixture.get("odds_home_value", 1)
-            odds_draw_value = fixture.get("odds_draw_value", 1)
-            odds_away_value = fixture.get("odds_away_value", 1)
+            try:
+                league_round = int(fixture.get("league_round", "1").split()[-1])
+            except (ValueError, IndexError):
+                league_round = 1
+
+            odds_home_value = fixture.get("odds_home_value")
+            odds_draw_value = fixture.get("odds_draw_value")
+            odds_away_value = fixture.get("odds_away_value")
+
+            # Si alguno de los valores es None, saltar a la siguiente iteración
+            if odds_home_value is None or odds_draw_value is None or odds_away_value is None:
+                continue
 
             # Aciertos previos para el equipo en el fixture
             equipo_id = fixture["home_team_id"] if fixture["home_team_id"] in equipos_involucrados else fixture["away_team_id"]

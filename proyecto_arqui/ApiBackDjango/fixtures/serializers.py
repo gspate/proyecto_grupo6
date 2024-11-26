@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Fixture, Bonos, User, Recommendation
+from .models import Fixture, Bonos, User, Recommendation, Auctions
 
 class FixtureSerializer(serializers.ModelSerializer):
     class Meta:
@@ -26,3 +26,9 @@ class RecommendationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Recommendation
         fields = '__all__'
+
+
+class AuctionsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Auctions
+        fields = '__all__'  

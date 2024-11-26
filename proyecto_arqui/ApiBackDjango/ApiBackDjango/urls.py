@@ -17,7 +17,7 @@ Including another URLconf
 """
 
 from django.urls import path, include
-from fixtures.views import FixtureList, FixtureDetail, BonusRequestView, BonusValidationView, BonosView, BonusHistoryView, UserView, UserDetailView, addwallet, StoreRecommendationView, UserPurchasesView, UserRecommendationsView, VerificarEstadoTransaccion, WorkersView, ReserveBonos, BuyBonos, AdminView
+from fixtures.views import FixtureList, FixtureDetail, BonusRequestView, BonusValidationView, BonosView, BonusHistoryView, UserView, UserDetailView, addwallet, StoreRecommendationView, UserPurchasesView, UserRecommendationsView, VerificarEstadoTransaccion, WorkersView, ReserveBonos, BuyBonos, AdminView, AuctionsView, AuctionsListView, GroupProposalsView, OfferBonosView, SendProposalView, ProposalResponseView, DeleteAuctionView
 
 # VerificarEstadoTransaccion
 
@@ -30,6 +30,7 @@ urlpatterns = [
     path('mqtt/requests', BonusRequestView.as_view(), name='bonus_request'),
     path('mqtt/validations/<str:request_id>', BonusValidationView.as_view(), name='bonus_validation'),
     path('mqtt/history', BonusHistoryView.as_view(), name='bonus_history'),
+    path('mqtt/auctions', AuctionsView.as_view(), name='auctions'),
 
     # Usuarios
     path('users', UserView.as_view(), name='user_list'),
@@ -55,4 +56,10 @@ urlpatterns = [
     path('admin/<str:user_id>', AdminView.as_view(), name='admin'),
     path('', include('django_prometheus.urls')),
     path('metrics/', include('django_prometheus.urls')),
+    path('auctions_offers/', AuctionsListView.as_view(), name='auctions-list'),
+    path('auctions_proposals/', GroupProposalsView.as_view(), name='group-proposals'),
+    path('send_offer', OfferBonosView.as_view(), name='offer-bonos'),
+    path('send_proposal', SendProposalView.as_view(), name='send-proposal'),
+    path('proposal_response', ProposalResponseView.as_view(), name='proposal-response'),
+    path('auction_delete', DeleteAuctionView.as_view(), name='delete-auction'),
 ]
