@@ -1547,6 +1547,9 @@ class ProposalResponseView(APIView):
             # Publicar en MQTT que se aceptó la propuesta
             self.publish_to_mqtt(data, "acceptance")
 
+            # Eliminar la auction correspondiente
+            self.delete_auction(data)
+
             return Response(
                 {"message": "Propuesta aceptada exitosamente y bonos actualizados."},
                 status=status.HTTP_200_OK,
@@ -1584,7 +1587,24 @@ class ProposalResponseView(APIView):
             )
         except Exception as e:
             raise Exception(f"Error al publicar en MQTT: {e}")
-
+        
+    def delete_auction(self, data):
+        """
+        Elimina la auction que coincida exactamente con los valores proporcionados.
+        """
+        try:
+            Auctions.objects.filter(
+                auction_id=data["auction_id"],
+                proposal_id=data["proposal_id"],
+                fixture_id=data["fixture_id"],
+                league_name=data["league_name"],
+                round=data["round"],
+                result=data["result"],
+                quantity=data["quantity"],
+                type=data["type"]
+            ).delete()
+        except Exception as e:
+            print(f"Error al intentar eliminar la auction: {str(e)}")
 
 class UserPurchasesView(APIView):
 
