@@ -9,6 +9,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.utils.timezone import now
 from django.views import View
+from django.db.models import Sum
 from .models import Fixture, Bonos, User, Recommendation, Auctions
 from .serializers import FixtureSerializer, BonosSerializer, UserSerializer, RecommendationSerializer, AuctionsSerializer
 from django.utils import timezone
@@ -1271,7 +1272,7 @@ class GroupProposalsView(APIView):
     def get(self, request, *args, **kwargs):
         try:
             # Buscar todas las auctions con group_id=6 y type="proposal"
-            group_auctions = Auctions.objects.filter(group_id=6, type="proposal")
+            group_auctions = Auctions.objects.filter(type="proposal")
 
             # Extraer los auction_ids de las auctions del grupo
             group_auction_ids = group_auctions.values_list("auction_id", flat=True)
