@@ -89,3 +89,15 @@ class Recommendation(models.Model):
     round = models.CharField(max_length=100, null=True, blank=True)
     benefit_score = models.FloatField()  # Ponderador calculado para la recomendaci贸n
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+class Auctions(models.Model):
+    auction_id = models.UUIDField(editable=False, null=False, blank=False)
+    proposal_id = models.CharField(editable=False, blank=True)
+    fixture_id = models.CharField(null=False, blank=False)
+    league_name = models.CharField(max_length=100, null=False, blank=False)
+    round = models.CharField(max_length=100, null=False, blank=False)
+    result = models.CharField(max_length=100, null=False, blank=False)
+    quantity = models.IntegerField(null=False, blank=False)
+    group_id = models.IntegerField(null=False, blank=False)
+    type = models.CharField(max_length=100, null=False, blank=False)
