@@ -1192,8 +1192,9 @@ class AuctionsView(APIView):
         elif auction_type in ["acceptance", "rejection"]:
             # Manejo de aceptación o rechazo
             proposal_id = data.get("proposal_id")
+            auction_id = data.get("auction_id")
             target_auction = Auctions.objects.filter(
-                proposal_id=proposal_id, group_id=6, type="proposal"
+                auction_id=auction_id
             ).first()
 
             if not target_auction:
@@ -1219,6 +1220,7 @@ class AuctionsView(APIView):
                         league_name=data.get("league_name"),
                         round=data.get("round"),
                         result=data.get("result"),
+                        quantity=data.get("quantity"),
                         group_id=6,
                         seller=6,  # Validar que sea de un admin
                         wallet=False,
