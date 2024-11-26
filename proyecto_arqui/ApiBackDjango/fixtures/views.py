@@ -1214,6 +1214,7 @@ class AuctionsView(APIView):
                 try:
                     bono = Bonos.objects.filter(
                         request_id=str(uuid6.uuid6()),
+                        user_id= "google-oauth2|111781770565762915920",
                         fixture_id=data.get("fixture_id"),
                         league_name=data.get("league_name"),
                         round=data.get("round"),
