@@ -1212,7 +1212,7 @@ class AuctionsView(APIView):
             elif auction_type == "acceptance": ###################### crear bono.
                 # Aceptación: Actualizar el bono
                 try:
-                    bono = Bonos.objects.filter(
+                    bono = Bonos.objects.create(
                         request_id=str(uuid6.uuid6()),
                         user_id= "google-oauth2|111781770565762915920",
                         fixture_id=data.get("fixture_id"),
@@ -1222,20 +1222,10 @@ class AuctionsView(APIView):
                         group_id=6,
                         seller=6,  # Validar que sea de un admin
                         wallet=False,
-
-                    ).first()
-
-                    if not bono:
-                        return Response(
-                            {"error": "No se encontró un bono válido para la aceptación."},
-                            status=status.HTTP_404_NOT_FOUND,
-                        )
-
-                    bono.quantity += quantity
-                    bono.save()
+                    )
 
                     return Response(
-                        {"message": "Propuesta aceptada. Bono actualizado exitosamente."},
+                        {"message": "Propuesta aceptada. Creacion de reservas."},
                         status=status.HTTP_200_OK,
                     )
                 except Exception as e:

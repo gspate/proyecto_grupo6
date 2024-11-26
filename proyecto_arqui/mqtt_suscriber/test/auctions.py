@@ -12,13 +12,13 @@ MQTT_PASSWORD = "iic2173-2024-2-students"
 
 # Función para generar datos falsos
 def generate_fake_data():
-    auction_id = str(uuid6.uuid6())
-    proposal_id = ""
+    auction_id = "1efabc47-e07c-6ff9-9e6b-41a1ccd465d6"
+    proposal_id = "1efabc70-d9a6-63f0-a960-2b708302b04d"
     fixture_id = 1212924  # Número aleatorio entre 1000 y 9999
-    league_name = random.choice(["Premier League", "La Liga", "Serie A", "Bundesliga"])
-    league_round = f"Round {random.randint(1, 38)}"
-    result = random.choice(["home", "away", "---"])
-    quantity = random.randint(1, 10)
+    league_name = "Premier League"
+    league_round = "Round 35"
+    result = "away"
+    quantity = 3
     group_id = 1000000
 
     data = {
@@ -30,7 +30,7 @@ def generate_fake_data():
         "result": result,
         "quantity": quantity,
         "group_id": group_id,
-        "type": "offer",
+        "type": "acceptance",
     }
 
     return data
