@@ -1300,10 +1300,6 @@ class OfferBonosView(APIView):
                 auth={"username": MQTT_USER, "password": MQTT_PASSWORD},
             )
 
-            # Descontar la cantidad ofertada del bono original
-            bono.quantity -= quantity
-            bono.save()
-
             return Response(
                 {"message": "Oferta publicada exitosamente.", "auction_id": str(auction_id)},
                 status=status.HTTP_201_CREATED,
