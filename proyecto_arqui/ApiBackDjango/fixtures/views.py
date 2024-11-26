@@ -1547,9 +1547,6 @@ class ProposalResponseView(APIView):
             # Publicar en MQTT que se aceptó la propuesta
             self.publish_to_mqtt(data, "acceptance")
 
-            # Eliminar la auction correspondiente
-            self.delete_auction(data)
-
             return Response(
                 {"message": "Propuesta aceptada exitosamente y bonos actualizados."},
                 status=status.HTTP_200_OK,
@@ -1588,12 +1585,38 @@ class ProposalResponseView(APIView):
         except Exception as e:
             raise Exception(f"Error al publicar en MQTT: {e}")
         
-    def delete_auction(self, data):
-        """
-        Elimina la auction que coincida exactamente con los valores proporcionados.
-        """
+
+class DeleteAuctionView(APIView):
+    """
+    Vista para eliminar una auction específica basada en los campos proporcionados.
+    """
+
+    def delete(self, request, *args, **kwargs):
+        # Campos requeridos desde el frontend
+        required_fields = [
+            "auction_id", "proposal_id", "fixture_id", "league_name",
+            "round", "result", "quantity", "type"
+        ]
+        data = request.data
+
+        # Validar que los campos requeridos estén presentes
+        missing_fields = [field for field in required_fields if field not in data]
+        if missing_fields:
+            return Response(
+                {"error": f"Faltan los campos obligatorios: {', '.join(missing_fields)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Validar el tipo de auction
+        if data.get("type") != "proposal":
+            return Response(
+                {"error": "El campo 'type' debe ser 'proposal'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         try:
-            Auctions.objects.filter(
+            # Buscar y eliminar la auction que coincide con los detalles proporcionados
+            auction = Auctions.objects.filter(
                 auction_id=data["auction_id"],
                 proposal_id=data["proposal_id"],
                 fixture_id=data["fixture_id"],
@@ -1602,9 +1625,27 @@ class ProposalResponseView(APIView):
                 result=data["result"],
                 quantity=data["quantity"],
                 type=data["type"]
-            ).delete()
+            )
+
+            if not auction.exists():
+                return Response(
+                    {"error": "No se encontró ninguna auction que coincida con los criterios proporcionados."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+            auction.delete()
+
+            return Response(
+                {"message": "Auction eliminada exitosamente."},
+                status=status.HTTP_200_OK,
+            )
+
         except Exception as e:
-            print(f"Error al intentar eliminar la auction: {str(e)}")
+            return Response(
+                {"error": f"Error al eliminar la auction: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
 
 class UserPurchasesView(APIView):
 

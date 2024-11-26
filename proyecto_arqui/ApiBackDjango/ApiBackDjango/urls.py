@@ -17,7 +17,7 @@ Including another URLconf
 """
 
 from django.urls import path, include
-from fixtures.views import FixtureList, FixtureDetail, BonusRequestView, BonusValidationView, BonosView, BonusHistoryView, UserView, UserDetailView, addwallet, StoreRecommendationView, UserPurchasesView, UserRecommendationsView, VerificarEstadoTransaccion, WorkersView, ReserveBonos, BuyBonos, AdminView, AuctionsView, AuctionsListView, GroupProposalsView, OfferBonosView, SendProposalView, ProposalResponseView
+from fixtures.views import FixtureList, FixtureDetail, BonusRequestView, BonusValidationView, BonosView, BonusHistoryView, UserView, UserDetailView, addwallet, StoreRecommendationView, UserPurchasesView, UserRecommendationsView, VerificarEstadoTransaccion, WorkersView, ReserveBonos, BuyBonos, AdminView, AuctionsView, AuctionsListView, GroupProposalsView, OfferBonosView, SendProposalView, ProposalResponseView, DeleteAuctionView
 
 # VerificarEstadoTransaccion
 
@@ -61,4 +61,5 @@ urlpatterns = [
     path('send_offer', OfferBonosView.as_view(), name='offer-bonos'),
     path('send_proposal', SendProposalView.as_view(), name='send-proposal'),
     path('proposal_response', ProposalResponseView.as_view(), name='proposal-response'),
+    path('auction_delete', DeleteAuctionView.as_view(), name='delete-auction'),
 ]
