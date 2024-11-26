@@ -19,7 +19,7 @@ def generate_fake_data():
     league_round = f"Round {random.randint(1, 38)}"
     result = random.choice(["home", "away", "---"])
     quantity = random.randint(1, 10)
-    group_id = 6
+    group_id = 1000000
 
     data = {
         "auction_id": auction_id,

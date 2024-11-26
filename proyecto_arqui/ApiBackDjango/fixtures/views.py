@@ -1212,11 +1212,15 @@ class AuctionsView(APIView):
                 # Aceptación: Actualizar el bono
                 try:
                     bono = Bonos.objects.filter(
+                        request_id=str(uuid6.uuid6()),
                         fixture_id=data.get("fixture_id"),
                         league_name=data.get("league_name"),
                         round=data.get("round"),
                         result=data.get("result"),
+                        group_id=6,
                         seller=6,  # Validar que sea de un admin
+                        wallet=False,
+
                     ).first()
 
                     if not bono:
@@ -1365,7 +1369,7 @@ class OfferBonosView(APIView):
             # Publicar el payload en el canal MQTT
             json_payload = json.dumps(payload)
             publish.single(
-                topic=MQTT_TOPIC,
+                topic=MQTT_AUC,
                 payload=json_payload,
                 hostname=MQTT_HOST,
                 port=MQTT_PORT,
@@ -1453,7 +1457,7 @@ class SendProposalView(APIView):
         try:
             # Publicar el mensaje en el canal MQTT
             publish.single(
-                topic=MQTT_TOPIC,
+                topic=MQTT_AUC,
                 payload=json.dumps(payload),
                 hostname=MQTT_HOST,
                 port=MQTT_PORT,
@@ -1469,6 +1473,120 @@ class SendProposalView(APIView):
                 {"error": f"Error al enviar la propuesta al broker MQTT: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+        
+
+class ProposalResponseView(APIView):
+    """
+    Vista para aceptar o rechazar propuestas en el canal fixtures/auctions.
+    """
+
+    def post(self, request, *args, **kwargs):
+        # Campos requeridos desde el frontend
+        required_fields = [
+            "auction_id", "proposal_id", "fixture_id", "league_name",
+            "round", "result", "quantity", "type"
+        ]
+        data = request.data
+
+        # Validar que los campos requeridos estén presentes
+        missing_fields = [field for field in required_fields if field not in data]
+        if missing_fields:
+            return Response(
+                {"error": f"Faltan los campos obligatorios: {', '.join(missing_fields)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Validar el tipo de acción
+        action_type = data.get("type")
+        if action_type not in ["acceptance", "rejection"]:
+            return Response(
+                {"error": "El campo 'type' debe ser 'acceptance' o 'rejection'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Si es un rechazo, no se realiza ninguna acción adicional
+        if action_type == "rejection":
+            # Publicar en MQTT que se rechazó la propuesta
+            self.publish_to_mqtt(data, "rejection")
+            return Response(
+                {"message": "Propuesta rechazada exitosamente."},
+                status=status.HTTP_200_OK,
+            )
+
+        # Si es una aceptación, buscar y actualizar los bonos
+        try:
+            # Buscar todos los bonos reservados que coincidan con los detalles y sean de admin
+            bonos = Bonos.objects.filter(
+                fixture_id=data["fixture_id"],
+                league_name=data["league_name"],
+                round=data["round"],
+                result=data["result"],
+                seller=6  # Solo bonos de admin
+            )
+
+            # Verificar si hay suficientes bonos disponibles en total
+            total_quantity = bonos.aggregate(Sum('quantity'))['quantity__sum'] or 0
+            if total_quantity < int(data["quantity"]):
+                return Response(
+                    {"error": "Cantidad insuficiente de bonos para aceptar la propuesta."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Restar la cantidad solicitada de los bonos disponibles
+            quantity_to_deduct = int(data["quantity"])
+            for bono in bonos:
+                if quantity_to_deduct == 0:
+                    break  # Ya se cubrió la cantidad necesaria
+
+                if bono.quantity >= quantity_to_deduct:
+                    bono.quantity -= quantity_to_deduct
+                    bono.save()
+                    quantity_to_deduct = 0
+                else:
+                    quantity_to_deduct -= bono.quantity
+                    bono.quantity = 0
+                    bono.save()
+
+            # Publicar en MQTT que se aceptó la propuesta
+            self.publish_to_mqtt(data, "acceptance")
+
+            return Response(
+                {"message": "Propuesta aceptada exitosamente y bonos actualizados."},
+                status=status.HTTP_200_OK,
+            )
+
+        except Bonos.DoesNotExist:
+            return Response(
+                {"error": "No se encontraron bonos que coincidan con la propuesta."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+    def publish_to_mqtt(self, data, action_type):
+        """
+        Publica la respuesta (aceptación o rechazo) en el canal MQTT.
+        """
+        payload = {
+            "auction_id": data["auction_id"],
+            "proposal_id": data["proposal_id"],
+            "fixture_id": data["fixture_id"],
+            "league_name": data["league_name"],
+            "round": data["round"],
+            "result": data["result"],
+            "quantity": data["quantity"],
+            "group_id": 6,  # Asume que el grupo es el 6
+            "type": action_type
+        }
+
+        try:
+            publish.single(
+                topic=MQTT_AUC,
+                payload=json.dumps(payload),
+                hostname=MQTT_HOST,
+                port=MQTT_PORT,
+                auth={"username": MQTT_USER, "password": MQTT_PASSWORD},
+            )
+        except Exception as e:
+            raise Exception(f"Error al publicar en MQTT: {e}")
 
 
 class UserPurchasesView(APIView):
