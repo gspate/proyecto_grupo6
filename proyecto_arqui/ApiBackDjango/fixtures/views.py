@@ -1300,6 +1300,16 @@ class OfferBonosView(APIView):
         # Paso 1: Validar el body de la request
         required_fields = ["fixture_id", "league_name", "round", "result", "quantity"]
         data = request.data
+        user_id = data.get("user_id")
+
+        try:
+            user = User.objects.get(user_id=user_id)
+        except User.DoesNotExist:
+            return Response({"error": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Validar si el usuario es administrador
+        if not user.is_admin:
+            return Response({"error": "Usuario no autorizado"}, status=status.HTTP_401_UNAUTHORIZED)
 
         missing_fields = [field for field in required_fields if field not in data]
         if missing_fields:
@@ -1396,6 +1406,16 @@ class SendProposalView(APIView):
         # Datos esperados del frontend
         required_fields = ["auction_id", "fixture_id", "league_name", "round", "result", "quantity"]
         data = request.data
+        user_id = data.get("user_id")
+
+        try:
+            user = User.objects.get(user_id=user_id)
+        except User.DoesNotExist:
+            return Response({"error": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Validar si el usuario es administrador
+        if not user.is_admin:
+            return Response({"error": "Usuario no autorizado"}, status=status.HTTP_401_UNAUTHORIZED)
 
         # Validar campos obligatorios
         missing_fields = [field for field in required_fields if field not in data]
@@ -1484,6 +1504,16 @@ class ProposalResponseView(APIView):
             "round", "result", "quantity", "type"
         ]
         data = request.data
+        user_id = data.get("user_id")
+
+        try:
+            user = User.objects.get(user_id=user_id)
+        except User.DoesNotExist:
+            return Response({"error": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Validar si el usuario es administrador
+        if not user.is_admin:
+            return Response({"error": "Usuario no autorizado"}, status=status.HTTP_401_UNAUTHORIZED)
 
         # Validar que los campos requeridos estén presentes
         missing_fields = [field for field in required_fields if field not in data]
@@ -1598,6 +1628,16 @@ class DeleteAuctionView(APIView):
             "round", "result", "quantity", "type"
         ]
         data = request.data
+        user_id = data.get("user_id")
+
+        try:
+            user = User.objects.get(user_id=user_id)
+        except User.DoesNotExist:
+            return Response({"error": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Validar si el usuario es administrador
+        if not user.is_admin:
+            return Response({"error": "Usuario no autorizado"}, status=status.HTTP_401_UNAUTHORIZED)
 
         # Validar que los campos requeridos estén presentes
         missing_fields = [field for field in required_fields if field not in data]
