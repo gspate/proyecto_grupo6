@@ -1547,3 +1547,5 @@ class UserRecommendationsView(APIView):
         # Serializa los fixtures encontrados
         serializer = FixtureSerializer(fixtures, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+# fix
