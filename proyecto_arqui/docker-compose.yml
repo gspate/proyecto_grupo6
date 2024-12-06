@@ -12,7 +12,7 @@ services:
     networks:
       - app-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U gustavog.spate -d football_db -h localhost"]
+      test: ["CMD-SHELL", "pg_isready -U gustavog.spate -d football_db -h postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -56,8 +56,6 @@ services:
     build:
       context: ./workers
       dockerfile: Dockerfile
-    deploy:
-      replicas: 2
     command: celery -A consumer.celery_app worker --loglevel=INFO --purge --concurrency=1
     volumes:
       - ./workers:/opt/
@@ -74,6 +72,8 @@ services:
       - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
     networks:
       - app-network
+    ports:
+       - "6379:6379"
 
   mqtt-subscriber-info:
     depends_on:
